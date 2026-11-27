@@ -1,15 +1,31 @@
 import { formatManwonShort } from '@ulsan/shared';
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { EmptyState, MockBadge, Skeleton, SourceNote } from '@/components/ui';
-import { dataSource } from '@/data';
+import { dataSource, type ComplexSummary } from '@/data';
+import { ComplexListItem } from '@/features/map/ComplexListItem';
+import { useAppStore } from '@/stores/app-store';
 import { radius, space, usePalette } from '@/theme/colors';
 
 export default function HomeScreen() {
   const c = usePalette();
   const regions = useQuery({ queryKey: ['regions'], queryFn: () => dataSource.getRegionSummaries() });
+  const favorites = useAppStore((s) => s.favorites);
+  const recentViews = useAppStore((s) => s.recentViews);
+  const ids = [...new Set([...favorites, ...recentViews.slice(0, 5)])];
+  const summaries = useQueries({
+    queries: ids.map((id) => ({ queryKey: ['complex', id], queryFn: () => dataSource.getComplexSummary(id) })),
+  });
+  const byId = new Map<string, ComplexSummary>();
+  summaries.forEach((r) => r.data && byId.set(r.data.id, r.data));
+  const favItems = favorites.map((id) => byId.get(id)).filter((x): x is ComplexSummary => !!x);
+  const recentItems = recentViews
+    .filter((id) => !favorites.includes(id))
+    .slice(0, 5)
+    .map((id) => byId.get(id))
+    .filter((x): x is ComplexSummary => !!x);
 
   return (
     <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={{ padding: space.lg, gap: space.lg }}>
@@ -56,12 +72,23 @@ export default function HomeScreen() {
         )}
       </View>
 
-      <View style={[styles.card, { backgroundColor: c.card, borderColor: c.border, borderWidth: StyleSheet.hairlineWidth }]}>
-        <Text style={[styles.h2, { color: c.text }]}>최근 본 단지 · 즐겨찾기</Text>
-        <Text style={{ color: c.textSub, marginTop: space.sm, lineHeight: 20 }}>
-          단지 상세 화면이 생기는 3단계부터 여기에 모여요.
-        </Text>
+      <View>
+        <Text style={[styles.h2, { color: c.text, marginBottom: space.sm }]}>⭐ 즐겨찾기</Text>
+        {favItems.length ? (
+          favItems.map((it) => <ComplexListItem key={it.id} item={it} />)
+        ) : (
+          <Text style={{ color: c.textSub, lineHeight: 20 }}>단지 상세 화면 아래 ☆ 버튼을 누르면 여기에 모여요.</Text>
+        )}
       </View>
+
+      {recentItems.length ? (
+        <View>
+          <Text style={[styles.h2, { color: c.text, marginBottom: space.sm }]}>최근 본 단지</Text>
+          {recentItems.map((it) => (
+            <ComplexListItem key={it.id} item={it} />
+          ))}
+        </View>
+      ) : null}
 
       <Text style={{ color: c.textSub, fontSize: 12, lineHeight: 18 }}>
         본 정보는 참고용이며 실제 거래 시 공식 서류를 확인하세요.

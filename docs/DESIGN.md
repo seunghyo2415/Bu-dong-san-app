@@ -43,7 +43,7 @@
 | 배치 수집 | **GitHub Actions 예약 실행 + Node 스크립트** | Edge Function은 실행 시간 제한이 있어 수천 건 수집에 불리. Actions는 무료 분량이 넉넉하고 로그가 남아 초보자도 확인 쉬움 |
 | 서버 상태 | TanStack Query | 캐시·재시도·로딩 상태 자동 |
 | UI 상태 | Zustand (+ MMKV 저장) | 필터, 최근 검색어, 지도 옵션 |
-| 차트 | **react-native-gifted-charts** | victory-native(최신판)는 Skia 등 추가 네이티브 의존성이 커서 초보자 빌드 문제 가능성 ↑ |
+| 차트 | **react-native-svg로 직접 그림** (3단계에서 변경) | 실거래는 "거래 1건=점, 월별 중간값=선" 산점도가 표준인데 gifted-charts는 산점도 지원이 약함. svg는 Expo Go에 기본 포함 |
 | 푸시 | expo-notifications + Expo Push | 서버 배치가 새 실거래 감지 → 푸시 |
 | 테스트 | Jest(앱 로직), Vitest(공용 패키지·수집기), Maestro(화면 흐름, 9단계) | |
 | 저장소 구조 | npm workspaces 모노레포 | pnpm보다 설치·설명이 단순 |
@@ -377,3 +377,12 @@ match_failures(id, source text, raw jsonb, candidates jsonb, reason text, resolv
 - 지도 마커 묶음: 카카오 레벨 8 이상 → 구·군, 6~7 → 동, 5 이하 → 단지 (화면 영역 안만). 카카오 `clusterer` 라이브러리는 쓰지 않고 서버(지금은 목업) 집계로 처리.
 - 앱↔지도 메시지 규약: `src/map-web/kakao-map-html.ts` 맨 위 주석.
 - `react-native-webview` 타입 선언이 최신 TypeScript와 안 맞아 `KakaoMap.tsx`에서 타입만 바로잡음.
+
+## 12. 3단계 구현 메모
+
+- 단지 상세 `app/complex/[id].tsx`: 상단 섹션 탭(요약·주차·시세·정보) + 하단 버튼(즐겨찾기·공유·메모).
+- 즐겨찾기·최근 본 단지·메모는 폰 안(AsyncStorage)에만 저장. 로그인 기능(4단계) 이후 서버 동기화 검토.
+- 주차 대표값은 K-apt, 비교값은 건축물대장. 차이 10% 이상이면 경고 (`compareParkingSources`).
+- 옥내=지하, 옥외=지상으로 표시. 실제 데이터에서 예외(옥내 지상 주차 타워 등)가 있으면 4단계에서 표기 조정.
+- 실거래 통계(최근·최고가·월별 중간값)는 해제 거래를 제외 (`packages/shared/src/trades.ts`).
+- 용어 설명(ⓘ)은 `components/ui/InfoTip.tsx`의 GLOSSARY 에서 관리.

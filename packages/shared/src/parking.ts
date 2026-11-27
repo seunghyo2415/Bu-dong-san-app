@@ -28,3 +28,31 @@ export function compareParkingSources(a: number, b: number) {
   const ratio = a > 0 ? diff / a : NaN;
   return { diff, ratio, significant: Number.isFinite(ratio) && Math.abs(ratio) >= 0.1 };
 }
+
+export type ParkingBreakdown = {
+  indoorSelf: number; // 옥내 자주식
+  indoorMech: number; // 옥내 기계식
+  outdoorSelf: number; // 옥외 자주식
+  outdoorMech: number; // 옥외 기계식
+};
+
+/** 옥내=지하(지하주차장), 옥외=지상 으로 본다 (공동주택은 대부분 옥내 주차장이 지하) */
+export function summarizeParking(b: ParkingBreakdown) {
+  const indoor = b.indoorSelf + b.indoorMech;
+  const outdoor = b.outdoorSelf + b.outdoorMech;
+  const total = indoor + outdoor;
+  const mech = b.indoorMech + b.outdoorMech;
+  return {
+    total,
+    indoor,
+    outdoor,
+    indoorRatio: total ? indoor / total : NaN,
+    mechanicalRatio: total ? mech / total : NaN,
+  };
+}
+
+/** 같은 동네 순위 (값이 클수록 1위). 반환: { position, total } */
+export function rankAmong(value: number, all: number[]) {
+  const valid = all.filter((v) => Number.isFinite(v));
+  return { position: valid.filter((v) => v > value).length + 1, total: valid.length };
+}

@@ -73,11 +73,63 @@ export type RegionSummary = {
   source: string;
 };
 
+export type DealType = 'sale' | 'jeonse' | 'monthly';
+
+export type Trade = {
+  id: string;
+  dealType: DealType;
+  date: string; // 계약일 YYYY-MM-DD
+  floor: number;
+  exclusiveM2: number;
+  /** 매매가, 또는 전세·월세 보증금 (만원) */
+  price: number;
+  monthlyRent?: number; // 월세 (만원)
+  isDirect: boolean; // 직거래 여부
+  canceled: boolean; // 해제(취소) 여부
+};
+
+export type AreaType = { exclusiveM2: number; supplyM2: number; households: number };
+
+export type ParkingSource = 'kapt' | 'bldrgst';
+
+export type ParkingFact = {
+  source: ParkingSource;
+  sourceLabel: string;
+  asOf: string;
+  indoorSelf: number;
+  indoorMech: number;
+  outdoorSelf: number;
+  outdoorMech: number;
+};
+
+export type ParkingReview = { score: number; comment: string; date: string };
+
+export type ComplexDetail = ComplexSummary & {
+  jibunAddress: string;
+  dongCount: number;
+  topFloor: number;
+  builder: string;
+  heating: string;
+  hallType: string;
+  areaTypes: AreaType[];
+  /** 대표 평형 최근 전세가 */
+  recentJeonse: Sourced<number> | null;
+  parking: {
+    facts: ParkingFact[]; // 출처별 값 (대표값은 facts[0])
+    elevatorToUnderground: boolean | null;
+    dongRank: { position: number; total: number; dongName: string };
+    evChargers: Sourced<number> | null; // 반경 500m
+    reviews: { average: number; count: number; recent: ParkingReview[] };
+  };
+};
+
 export interface DataSource {
   readonly mode: 'mock' | 'supabase';
   getMapMarkers(bbox: BBox, mode: MapLevelMode, filters: ComplexFilters): Promise<MapMarker[]>;
   listComplexes(bbox: BBox | null, filters: ComplexFilters): Promise<ComplexSummary[]>;
   getComplexSummary(id: string): Promise<ComplexSummary | null>;
+  getComplexDetail(id: string): Promise<ComplexDetail | null>;
+  getTrades(id: string): Promise<Trade[]>;
   search(query: string): Promise<SearchResult[]>;
   getRegionSummaries(): Promise<RegionSummary[]>;
 }

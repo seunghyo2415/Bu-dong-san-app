@@ -9,7 +9,7 @@ import type {
   RegionSummary,
   SearchResult,
 } from '../types';
-import { MOCK_AS_OF, MOCK_COMPLEXES, MOCK_DONGS, MOCK_SOURCE } from './complexes';
+import { MOCK_AS_OF, MOCK_COMPLEXES, MOCK_DETAILS, MOCK_DONGS, MOCK_SOURCE, MOCK_TRADES } from './complexes';
 
 /** 실제 서버처럼 약간 늦게 응답 → 스켈레톤 UI 확인용 */
 const delay = (ms = 250) => new Promise((r) => setTimeout(r, ms));
@@ -92,6 +92,16 @@ export const mockDataSource: DataSource = {
   async getComplexSummary(id) {
     await delay();
     return MOCK_COMPLEXES.find((c) => c.id === id) ?? null;
+  },
+
+  async getComplexDetail(id) {
+    await delay();
+    return MOCK_DETAILS.find((c) => c.id === id) ?? null;
+  },
+
+  async getTrades(id) {
+    await delay(350);
+    return MOCK_TRADES.get(id) ?? [];
   },
 
   async search(query) {
