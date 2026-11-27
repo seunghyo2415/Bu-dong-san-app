@@ -1,9 +1,11 @@
 import { compareParkingSources, formatPercent, parkingPerHousehold } from '@ulsan/shared';
 import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { Card, InfoTip, Row, SectionTitle, SourceNote } from '@/components/ui';
-import type { ComplexDetail, ParkingFact } from '@/data';
+import { dataSource, type ComplexDetail, type ParkingFact } from '@/data';
+import { ParkingReviewModal } from '@/features/community/ParkingReviewModal';
 import { radius, space, usePalette } from '@/theme/colors';
 
 import { gradeColor } from './grade';
@@ -48,6 +50,7 @@ const hasBreakdown = (f: ParkingFact) => f.indoorSelf != null || f.indoorMech !=
 export function ParkingSection({ d }: { d: ComplexDetail }) {
   const c = usePalette();
   const reviews = d.parking.reviews;
+  const [reviewOpen, setReviewOpen] = useState(false);
   const facts = d.parking.facts.filter((f) => totalOf(f) > 0);
   if (!facts.length) {
     return (
@@ -185,10 +188,11 @@ export function ParkingSection({ d }: { d: ComplexDetail }) {
         ) : (
           <Text style={{ color: c.textSub, marginTop: space.sm }}>아직 평가가 없어요.</Text>
         )}
-        <Pressable disabled style={{ marginTop: space.sm, paddingVertical: 12, borderRadius: radius.md, backgroundColor: c.chip, alignItems: 'center', opacity: 0.6 }}>
-          <Text style={{ color: c.text, fontWeight: '700' }}>평가 남기기 (로그인 기능 연결 후)</Text>
+        <Pressable onPress={() => setReviewOpen(true)} style={{ marginTop: space.sm, paddingVertical: 12, borderRadius: radius.md, backgroundColor: c.primary, alignItems: 'center' }} accessibilityRole="button">
+          <Text style={{ color: c.primaryText, fontWeight: '800' }}>내 평가 남기기</Text>
         </Pressable>
-        <Text style={{ color: c.textSub, fontSize: 12, marginTop: 6 }}>주민 평가는 목업이에요. 실제 평가는 로그인 기능(4·7단계) 이후 받을 수 있어요.</Text>
+        {dataSource.mode === 'mock' ? <Text style={{ color: c.textSub, fontSize: 12, marginTop: 6 }}>지금 보이는 평가는 목업이에요.</Text> : null}
+        <ParkingReviewModal complexId={d.id} visible={reviewOpen} onClose={() => setReviewOpen(false)} />
       </Card>
     </View>
   );

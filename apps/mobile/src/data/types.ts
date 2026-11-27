@@ -144,6 +144,38 @@ export type ComplexCandidate = {
 
 export type CandidateQuery = { name?: string | null; address?: string | null; dong?: string | null };
 
+export type PostCategory = 'review' | 'pros_cons' | 'question';
+export type BoardPost = {
+  id: string;
+  category: PostCategory;
+  body: string;
+  createdAt: string;
+  nickname: string;
+  authorId: string;
+  residentVerified: boolean;
+  mine: boolean;
+  commentCount: number;
+};
+export type BoardComment = { id: string; body: string; createdAt: string; nickname: string; authorId: string; mine: boolean };
+export type Me = { userId: string; nickname: string | null };
+export type ExternalProvider = 'naver_blog' | 'naver_cafe' | 'kakao_blog' | 'kakao_cafe' | 'kakao_web' | 'youtube';
+export type ExternalPostItem = { provider: ExternalProvider; title: string; summary: string; url: string; date: string | null; source: string; thumbnail: string | null };
+
+/** 커뮤니티 (외부 글 모아보기 + 단지 게시판 + 주차 체감 평가) */
+export interface CommunitySource {
+  getExternalPosts(c: { id: string; name: string; regionName: string }, provider: ExternalProvider, sort: 'relevance' | 'date'): Promise<ExternalPostItem[]>;
+  me(): Promise<Me | null>;
+  signIn(nickname: string): Promise<Me>;
+  listPosts(complexId: string): Promise<BoardPost[]>;
+  createPost(input: { complexId: string; category: PostCategory; body: string; residentVerified: boolean }): Promise<void>;
+  deletePost(id: string): Promise<void>;
+  listComments(postId: string): Promise<BoardComment[]>;
+  addComment(postId: string, body: string): Promise<void>;
+  report(type: 'post' | 'comment', id: string, reason: string): Promise<void>;
+  block(userId: string): Promise<void>;
+  submitParkingReview(complexId: string, score: number, comment: string): Promise<void>;
+}
+
 export interface DataSource {
   readonly mode: 'mock' | 'supabase';
   getMapMarkers(bbox: BBox, mode: MapLevelMode, filters: ComplexFilters): Promise<MapMarker[]>;
@@ -155,4 +187,5 @@ export interface DataSource {
   getRegionSummaries(): Promise<RegionSummary[]>;
   /** 이름·주소·동으로 단지 후보 (점수 높은 순) */
   findCandidates(q: CandidateQuery): Promise<ComplexCandidate[]>;
+  community: CommunitySource;
 }

@@ -9,6 +9,7 @@ import type {
   RegionSummary,
   SearchResult,
 } from '../types';
+import { mockCommunity } from './community';
 import { MOCK_AS_OF, MOCK_COMPLEXES, MOCK_DETAILS, MOCK_DONGS, MOCK_SOURCE, MOCK_TRADES } from './complexes';
 
 /** 실제 서버처럼 약간 늦게 응답 → 스켈레톤 UI 확인용 */
@@ -54,6 +55,7 @@ function dice(a: string, b: string) {
 
 export const mockDataSource: DataSource = {
   mode: 'mock',
+  community: mockCommunity,
 
   async getMapMarkers(bbox, mode, filters) {
     await delay(120);

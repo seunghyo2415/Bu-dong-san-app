@@ -39,6 +39,8 @@ npx supabase login
 npx supabase link --project-ref <프로젝트-ref>
 npx supabase db push                      # supabase/migrations 적용
 npx supabase functions deploy ingest      # 자동 수집 함수
+npx supabase functions deploy geo         # 주소·장소 검색 (공유 매물 후보 찾기)
+npx supabase functions deploy community   # 외부 글 모아보기
 ```
 
 ## 5. ★ 비밀값 넣기 (Supabase 대시보드)
@@ -50,6 +52,10 @@ Edge Functions → **Secrets** → Add:
 | `PUBLIC_DATA_KEY` | 1번 인증키 (Decoding) |
 | `KAKAO_REST_KEY` | 2번 REST 키 |
 | `INGEST_SECRET` | 아무 긴 문자열 (예: 비밀번호 생성기로 40자) |
+| `NAVER_CLIENT_ID` · `NAVER_CLIENT_SECRET` | (7단계, 선택) 네이버 개발자센터 → 애플리케이션 등록 → 검색 API |
+| `YOUTUBE_API_KEY` | (7단계, 선택) Google Cloud Console → YouTube Data API v3 사용 설정 → API 키 |
+
+그리고 **Authentication → Sign In / Providers → Anonymous sign-ins 켜기** (커뮤니티 닉네임 로그인에 필요).
 
 그다음 SQL Editor 에서 `supabase/schedule.sql` 내용을 붙여넣고 `<...>` 두 곳을 바꿔 실행 → 매일 자동 수집 예약.
 

@@ -407,3 +407,17 @@
 | `bylotCnt` | 외필지수 |
 | `naRoadCd` | 새주소도로코드 |
 
+
+---
+
+## (참고) 공공데이터 외 API — 각 사 개발자 문서 기준, 첫 실제 호출 때 확인 필요
+
+> 아래는 개발 환경에서 해당 문서 사이트 접속이 막혀 공식 문서를 직접 열어 확인하지 못한 항목입니다. 키 발급 후 첫 호출 응답으로 확인해 이 표를 갱신합니다.
+
+| API | 주소 | 사용하는 필드 |
+|---|---|---|
+| 카카오 주소 검색 | `dapi.kakao.com/v2/local/search/address.json` | `documents[].x`, `y`, `address.b_code`, `main_address_no`, `sub_address_no`, `mountain_yn` |
+| 카카오 키워드·카테고리 (JS SDK `services.Places`) | 앱 WebView | `place_name`, `road_address_name`, `address_name`, `x`, `y`, `distance`, `category_group_code` / 카테고리 SC4·AC5·MT1·HP8·BK9 |
+| 네이버 검색 | `openapi.naver.com/v1/search/blog.json`, `cafearticle.json` | `items[].title`, `link`, `description`, `bloggername`, `postdate`, `cafename` |
+| 카카오(다음) 검색 | `dapi.kakao.com/v2/search/blog`, `cafe`, `web` | `documents[].title`, `contents`, `url`, `blogname`, `cafename`, `datetime`, `thumbnail` |
+| YouTube Data API v3 | `www.googleapis.com/youtube/v3/search` | `items[].id.videoId`, `snippet.title`, `description`, `publishedAt`, `channelTitle`, `thumbnails.default.url` |

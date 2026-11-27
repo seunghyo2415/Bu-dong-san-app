@@ -10,13 +10,14 @@ import { dataSource } from '@/data';
 import { InfoSection } from '@/features/complex/InfoSection';
 import { ListingsSection } from '@/features/complex/ListingsSection';
 import { LocationSection } from '@/features/location/LocationSection';
+import { CommunitySection } from '@/features/community/CommunitySection';
 import { ParkingSection } from '@/features/complex/ParkingSection';
 import { PriceSection } from '@/features/complex/PriceSection';
 import { SummarySection } from '@/features/complex/SummarySection';
 import { useAppStore } from '@/stores/app-store';
 import { radius, space, usePalette } from '@/theme/colors';
 
-const SECTIONS = ['요약', '주차', '시세', '위치', '매물', '정보'] as const;
+const SECTIONS = ['요약', '주차', '시세', '위치', '매물', '이야기', '정보'] as const;
 type Section = (typeof SECTIONS)[number];
 
 export default function ComplexScreen() {
@@ -91,7 +92,7 @@ export default function ComplexScreen() {
       <View style={[styles.tabs, { backgroundColor: c.card, borderBottomColor: c.border }]}>
         {SECTIONS.map((s) => (
           <Pressable key={s} onPress={() => jump(s)} style={[styles.tab, active === s && { borderBottomColor: c.primary }]} accessibilityRole="tab" accessibilityState={{ selected: active === s }}>
-            <Text style={{ color: active === s ? c.primary : c.textSub, fontWeight: '700', fontSize: 14 }}>{s}</Text>
+            <Text style={{ color: active === s ? c.primary : c.textSub, fontWeight: '700', fontSize: 13 }}>{s}</Text>
           </Pressable>
         ))}
       </View>
@@ -133,6 +134,9 @@ export default function ComplexScreen() {
         </View>
         <View onLayout={mark('매물')}>
           <ListingsSection d={d} />
+        </View>
+        <View onLayout={mark('이야기')}>
+          <CommunitySection d={d} />
         </View>
         <View onLayout={mark('정보')}>
           <InfoSection d={d} />

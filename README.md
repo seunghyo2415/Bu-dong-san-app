@@ -4,7 +4,7 @@
 
 - 설계서: [docs/DESIGN.md](docs/DESIGN.md)
 - API 키 발급 안내: [docs/API_KEYS.md](docs/API_KEYS.md)
-- 지금 상태: **6단계 완료** (로드뷰·주변시설·직장 거리·통근버스 파일 불러오기). 이전: 5단계 (당근 공유 → 분석 → 내 매물함). 4단계 실데이터는 키 입력 후 동작 — [docs/SETUP_SUPABASE.md](docs/SETUP_SUPABASE.md)
+- 지금 상태: **7단계 완료** (커뮤니티: 외부 글 모아보기·단지 게시판·주차 체감 평가). 이전: 6단계 (로드뷰·주변시설·직장 거리·통근버스 파일 불러오기). 이전: 5단계 (당근 공유 → 분석 → 내 매물함). 4단계 실데이터는 키 입력 후 동작 — [docs/SETUP_SUPABASE.md](docs/SETUP_SUPABASE.md)
 
 ## 폴더
 

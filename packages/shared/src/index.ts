@@ -5,3 +5,4 @@ export * from './trades';
 export * from './share-parse';
 export * from './commute';
 export * from './xlsx';
+export * from './community';

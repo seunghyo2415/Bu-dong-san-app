@@ -1,5 +1,6 @@
 import type { BBox, ComplexCandidate, ComplexDetail, ComplexSummary, DataSource, LatLng, MapMarker, RegionSummary, SearchResult, Trade } from '../types';
 import { rpc, supabase } from './client';
+import { supabaseCommunity } from './community';
 
 /** 카카오 주소 검색 (서버 함수 geo 경유) */
 export async function geocode(query: string): Promise<LatLng | null> {
@@ -19,6 +20,7 @@ const box = (b: BBox) => ({ sw_lat: b.sw.lat, sw_lng: b.sw.lng, ne_lat: b.ne.lat
 /** 실제 데이터: Supabase DB 함수(supabase/migrations/*_app_read.sql)를 호출 */
 export const supabaseDataSource: DataSource = {
   mode: 'supabase',
+  community: supabaseCommunity,
   getMapMarkers: (bbox, mode, filters) => rpc<MapMarker[]>('map_markers', { ...box(bbox), mode, filters }),
   listComplexes: (bbox, filters) => rpc<ComplexSummary[]>('list_complexes', { filters, ...(bbox ? box(bbox) : {}) }),
   getComplexSummary: (id) => rpc<ComplexSummary | null>('complex_summary', { p_id: id }),
