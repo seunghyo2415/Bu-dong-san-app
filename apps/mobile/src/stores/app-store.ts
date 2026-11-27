@@ -6,6 +6,9 @@ import type { ComplexFilters, LatLng } from '@/data';
 
 type PriceLabel = 'price' | 'pyeong' | 'none';
 
+/** 출퇴근 거리 계산용 직장 (이 폰에만 저장) */
+export type Workplace = { id: string; name: string; address: string; location: LatLng };
+
 type AppState = {
   filters: ComplexFilters;
   setFilters: (f: ComplexFilters) => void;
@@ -21,6 +24,10 @@ type AppState = {
   addRecentSearch: (q: string) => void;
   removeRecentSearch: (q: string) => void;
   clearRecentSearches: () => void;
+
+  workplaces: Workplace[];
+  addWorkplace: (w: Omit<Workplace, 'id'>) => void;
+  removeWorkplace: (id: string) => void;
 
   favorites: string[]; // 단지 id
   toggleFavorite: (id: string) => void;
@@ -58,6 +65,10 @@ export const useAppStore = create<AppState>()(
       removeRecentSearch: (q) => set((s) => ({ recentSearches: s.recentSearches.filter((x) => x !== q) })),
       clearRecentSearches: () => set({ recentSearches: [] }),
 
+      workplaces: [],
+      addWorkplace: (w) => set((s) => ({ workplaces: [...s.workplaces, { ...w, id: Date.now().toString(36) }] })),
+      removeWorkplace: (id) => set((s) => ({ workplaces: s.workplaces.filter((x) => x.id !== id) })),
+
       favorites: [],
       toggleFavorite: (id) =>
         set((s) => ({ favorites: s.favorites.includes(id) ? s.favorites.filter((x) => x !== id) : [id, ...s.favorites] })),
@@ -80,7 +91,8 @@ export const useAppStore = create<AppState>()(
       name: 'app-store',
       storage: createJSONStorage(() => AsyncStorage),
       // 지도 이동 요청은 저장하지 않음
-      partialize: ({ filters, priceLabel, viewMode, recentSearches, favorites, recentViews, memos }) => ({
+      partialize: ({ filters, priceLabel, viewMode, recentSearches, favorites, recentViews, memos, workplaces }) => ({
+        workplaces,
         filters,
         priceLabel,
         viewMode,

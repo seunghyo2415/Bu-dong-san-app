@@ -12,7 +12,10 @@ const RNWebView = WebView as unknown as ComponentType<WebViewProps & RefAttribut
 
 export const KAKAO_JS_KEY = process.env.EXPO_PUBLIC_KAKAO_JS_KEY ?? '';
 
+export type BusLayer = { color: string; path: LatLng[]; stops: { name: string; lat: number; lng: number; info: string }[] }[] | null;
+
 type Props = {
+  busLayer?: BusLayer;
   initialCenter: LatLng;
   initialLevel: number;
   markers: MapMarker[];
@@ -33,7 +36,7 @@ type FromWeb =
   | { type: 'error'; message: string };
 
 export function KakaoMap(props: Props) {
-  const { markers, priceLabel, focus, myLocation, onIdle, onMarkerPress, onMapPress, onError } = props;
+  const { markers, priceLabel, focus, myLocation, onIdle, onMarkerPress, onMapPress, onError, busLayer = null } = props;
   const ref = useRef<WebViewRef>(null);
   const [ready, setReady] = useState(false);
   const dark = useColorScheme() === 'dark';
@@ -58,6 +61,10 @@ export function KakaoMap(props: Props) {
   useEffect(() => {
     if (ready && myLocation) post({ type: 'setMyLocation', ...myLocation });
   }, [ready, myLocation, post]);
+
+  useEffect(() => {
+    if (ready) post({ type: 'setBusLayer', routes: busLayer });
+  }, [ready, busLayer, post]);
 
   useEffect(() => {
     if (ready) post({ type: 'setTheme', dark });

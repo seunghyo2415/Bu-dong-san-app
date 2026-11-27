@@ -7,6 +7,8 @@ import { useEffect, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { KakaoServicesProvider } from '@/features/places/KakaoServices';
+
 // 공유 수신 네이티브 모듈은 개발용 앱(APK)·정식 앱에만 있고 Expo Go 에는 없다 → 없으면 끔
 const isExpoGo = !requireOptionalNativeModule('ExpoShareIntentModule');
 
@@ -31,6 +33,7 @@ export default function RootLayout() {
     <ShareIntentProvider options={{ disabled: isExpoGo, resetOnBackground: true }}>
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
+        <KakaoServicesProvider>
         {isExpoGo ? null : <ShareIntentRouter />}
         <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
           <StatusBar style="auto" />
@@ -40,8 +43,12 @@ export default function RootLayout() {
             <Stack.Screen name="complex/[id]" options={{ title: '' }} />
             <Stack.Screen name="share/receive" options={{ title: '공유받은 매물' }} />
             <Stack.Screen name="listing/[id]" options={{ title: '저장한 매물' }} />
+            <Stack.Screen name="roadview" options={{ title: '로드뷰' }} />
+            <Stack.Screen name="commute" options={{ title: '통근버스 노선' }} />
+            <Stack.Screen name="workplaces" options={{ title: '내 직장' }} />
           </Stack>
         </ThemeProvider>
+        </KakaoServicesProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
     </ShareIntentProvider>

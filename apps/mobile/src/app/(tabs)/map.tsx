@@ -2,8 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { ULSAN_CENTER } from '@ulsan/shared';
 import { useQuery } from '@tanstack/react-query';
 import * as Location from 'expo-location';
-import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -12,8 +12,10 @@ import { dataSource, type BBox, type LatLng } from '@/data';
 import { ComplexListItem } from '@/features/map/ComplexListItem';
 import { FilterSheet, describeFilters } from '@/features/map/FilterSheet';
 import { KAKAO_JS_KEY, KakaoMap } from '@/features/map/KakaoMap';
+import { buildBusLayer } from '@/features/commute/layer';
 import { levelToMode } from '@/map-web/kakao-map-html';
 import { useAppStore } from '@/stores/app-store';
+import { useCommute } from '@/stores/commute';
 import { radius, space, usePalette } from '@/theme/colors';
 
 const INITIAL_LEVEL = 9;
@@ -40,6 +42,16 @@ export default function MapScreen() {
   const [myLocation, setMyLocation] = useState<LatLng | null>(null);
   const [tapped, setTapped] = useState<LatLng | null>(null);
   const [focus, setFocus] = useState<{ location: LatLng; level: number } | null>(null);
+  const params = useLocalSearchParams<{ bus?: string }>();
+  const commute = useCommute();
+  const [showBus, setShowBus] = useState(false);
+  useEffect(() => {
+    if (params.bus) setShowBus(true);
+  }, [params.bus]);
+  const busLayer = useMemo(
+    () => (showBus ? buildBusLayer(commute.routes, commute.stops, commute.company) : null),
+    [showBus, commute.routes, commute.stops, commute.company],
+  );
 
   const mapUsable = !mapError;
   const showMap = mapUsable && viewMode === 'map';
@@ -89,6 +101,7 @@ export default function MapScreen() {
           priceLabel={priceLabel}
           focus={focus}
           myLocation={myLocation}
+          busLayer={busLayer}
           onIdle={onIdle}
           onMarkerPress={(m) => {
             setTapped(null);
@@ -116,6 +129,7 @@ export default function MapScreen() {
             <Chip key={l} label={l} active onPress={() => setFilterOpen(true)} />
           ))}
           {filterLabels.length ? <Chip label="초기화" onPress={() => setFilters({})} /> : null}
+          {commute.routes.length && mapUsable ? <Chip label="🚌 통근버스" active={showBus} onPress={() => setShowBus((v) => !v)} /> : null}
         </ScrollView>
         <MockBadge style={{ marginTop: space.xs }} />
       </View>

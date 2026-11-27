@@ -6,11 +6,13 @@
  *   - moveTo     { lat, lng, level }
  *   - setMyLocation { lat, lng }
  *   - setTheme   { dark }
+ *   - setBusLayer { routes: [{ color, path: [{lat,lng}], stops: [{ name, lat, lng, info }] }] | null }
  * 지도 → 앱 : window.ReactNativeWebView.postMessage(JSON.stringify({ type, ... }))
  *   - ready
  *   - idle        { bbox: { sw, ne }, level }
  *   - markerPress { id, kind, lat, lng }
  *   - mapPress    { lat, lng }
+ *   - busStopPress { name }
  *   - error       { message }
  *
  * 카카오 JavaScript 키는 "공개용" 키라 앱에 들어가도 되지만,
@@ -24,7 +26,7 @@ export function buildKakaoMapHtml(opts: {
   level: number;
   dark: boolean;
 }) {
-  const init = JSON.stringify(opts);
+  const init = JSON.stringify(opts).replace(/</g, '\\u003c'); // </script> 탈출 방지
   return `<!doctype html>
 <html lang="ko">
 <head>
@@ -45,6 +47,9 @@ export function buildKakaoMapHtml(opts: {
   .rg b { font-size: 14px; }
   .rg .s { display: block; font-size: 11px; opacity: .85; }
   .dark .rg { background: rgba(241,243,245,.92); color: #15171A; }
+  .bs { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.35); cursor: pointer; }
+  .bt { background: #fff; color: #15171A; border-radius: 8px; padding: 6px 9px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.25);
+        white-space: pre-line; max-width: 220px; transform: translateY(-14px); }
   .me { width: 16px; height: 16px; border-radius: 50%; background: #1F6FEB; border: 3px solid #fff;
         box-shadow: 0 0 0 6px rgba(31,111,235,.25); }
 </style>
@@ -54,7 +59,7 @@ export function buildKakaoMapHtml(opts: {
 <script>
 (function () {
   var INIT = ${init};
-  var map = null, overlays = [], meOverlay = null;
+  var map = null, overlays = [], meOverlay = null, busObjs = [], busTip = null;
   if (INIT.dark) document.body.classList.add('dark');
 
   function send(msg) {
@@ -119,6 +124,36 @@ export function buildKakaoMapHtml(opts: {
       bbox: { sw: { lat: sw.getLat(), lng: sw.getLng() }, ne: { lat: ne.getLat(), lng: ne.getLng() } } });
   }
 
+  function clearBus() {
+    busObjs.forEach(function (o) { o.setMap(null); });
+    busObjs = [];
+    if (busTip) { busTip.setMap(null); busTip = null; }
+  }
+  function setBusLayer(routes) {
+    clearBus();
+    if (!routes) return;
+    routes.forEach(function (r) {
+      var line = new kakao.maps.Polyline({
+        path: r.path.map(function (p) { return new kakao.maps.LatLng(p.lat, p.lng); }),
+        strokeWeight: 4, strokeColor: r.color, strokeOpacity: 0.75, strokeStyle: 'solid'
+      });
+      line.setMap(map); busObjs.push(line);
+      r.stops.forEach(function (st) {
+        var d = document.createElement('div'); d.className = 'bs'; d.style.background = r.color;
+        d.addEventListener('click', function (ev) {
+          ev.stopPropagation();
+          if (busTip) busTip.setMap(null);
+          var t = document.createElement('div'); t.className = 'bt'; t.textContent = st.info;
+          busTip = new kakao.maps.CustomOverlay({ position: new kakao.maps.LatLng(st.lat, st.lng), content: t, yAnchor: 1, zIndex: 6 });
+          busTip.setMap(map);
+          send({ type: 'busStopPress', name: st.name });
+        });
+        var o = new kakao.maps.CustomOverlay({ position: new kakao.maps.LatLng(st.lat, st.lng), content: d, clickable: true, zIndex: 4 });
+        o.setMap(map); busObjs.push(o);
+      });
+    });
+  }
+
   window.__fromApp = function (msg) {
     if (!map) return;
     if (msg.type === 'setMarkers') setMarkers(msg.markers, msg.priceLabel);
@@ -132,6 +167,8 @@ export function buildKakaoMapHtml(opts: {
         meOverlay = new kakao.maps.CustomOverlay({ position: pos, content: d, zIndex: 5 });
         meOverlay.setMap(map);
       } else meOverlay.setPosition(pos);
+    } else if (msg.type === 'setBusLayer') {
+      setBusLayer(msg.routes);
     } else if (msg.type === 'setTheme') {
       document.body.classList.toggle('dark', !!msg.dark);
     }
@@ -157,6 +194,7 @@ export function buildKakaoMapHtml(opts: {
       map.setMaxLevel(12);
       kakao.maps.event.addListener(map, 'idle', reportIdle);
       kakao.maps.event.addListener(map, 'click', function (e) {
+        if (busTip) { busTip.setMap(null); busTip = null; }
         send({ type: 'mapPress', lat: e.latLng.getLat(), lng: e.latLng.getLng() });
       });
       send({ type: 'ready' });
