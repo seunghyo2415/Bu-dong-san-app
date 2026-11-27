@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EmptyState, MockBadge, Skeleton } from '@/components/ui';
@@ -14,6 +14,7 @@ import { CommunitySection } from '@/features/community/CommunitySection';
 import { ParkingSection } from '@/features/complex/ParkingSection';
 import { PriceSection } from '@/features/complex/PriceSection';
 import { SummarySection } from '@/features/complex/SummarySection';
+import { disableTradeAlerts, enableTradeAlerts } from '@/features/alerts/push';
 import { useAppStore } from '@/stores/app-store';
 import { radius, space, usePalette } from '@/theme/colors';
 
@@ -25,7 +26,7 @@ export default function ComplexScreen() {
   const insets = useSafeAreaInsets();
   const { id, savedListing } = useLocalSearchParams<{ id: string; savedListing?: string }>();
   const q = useQuery({ queryKey: ['complex-detail', id], queryFn: () => dataSource.getComplexDetail(id) });
-  const { favorites, toggleFavorite, addRecentView, memos, setMemo } = useAppStore();
+  const { favorites, toggleFavorite, addRecentView, memos, setMemo, compareIds, toggleCompare } = useAppStore();
   const scrollRef = useRef<ScrollViewInstance>(null);
   // 각 블록의 높이를 기록해 위치를 계산 (웹에서는 onLayout 이 위치 변화만으로는 다시 불리지 않아 높이 합산 방식 사용)
   const heights = useRef<Record<string, number>>({});
@@ -33,9 +34,13 @@ export default function ComplexScreen() {
   const [memoOpen, setMemoOpen] = useState(false);
   const [memoDraft, setMemoDraft] = useState('');
 
+  const markSeen = useAppStore((s) => s.markSeen);
   useEffect(() => {
-    if (q.data) addRecentView(q.data.id);
-  }, [q.data, addRecentView]);
+    if (!q.data) return;
+    addRecentView(q.data.id);
+    // 이 단지의 거래를 여기까지 봤다고 기록 → 홈의 '새 실거래' 표시 기준
+    markSeen(q.data.id, dataSource.mode === 'mock' ? '2026-11-01' : new Date().toISOString().slice(0, 10));
+  }, [q.data, addRecentView, markSeen]);
 
   if (q.isPending) {
     return (
@@ -146,9 +151,30 @@ export default function ComplexScreen() {
 
       {/* 하단 버튼 (한 손 조작) */}
       <View style={[styles.bottom, { backgroundColor: c.card, borderTopColor: c.border, paddingBottom: insets.bottom + space.sm }]}>
-        <Pressable onPress={() => toggleFavorite(d.id)} style={styles.action} accessibilityRole="button" accessibilityState={{ selected: fav }}>
+        <Pressable
+          onPress={async () => {
+            toggleFavorite(d.id);
+            if (fav) return disableTradeAlerts(d.id);
+            const r = await enableTradeAlerts(d.id);
+            if (r === 'denied') Alert.alert('알림이 꺼져 있어요', '휴대폰 설정에서 알림을 허용하면 새 실거래를 알려드려요.');
+          }}
+          style={styles.action}
+          accessibilityRole="button"
+          accessibilityState={{ selected: fav }}>
           <Ionicons name={fav ? 'star' : 'star-outline'} size={24} color={fav ? c.warn : c.text} />
           <Text style={{ color: c.text, fontSize: 12, fontWeight: '600' }}>{fav ? '즐겨찾기됨' : '즐겨찾기'}</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            const r = toggleCompare(d.id);
+            if (r === 'full') Alert.alert('비교함이 가득 찼어요', '최대 3곳까지 비교할 수 있어요.', [{ text: '비교 보기', onPress: () => router.navigate('/compare') }, { text: '닫기' }]);
+          }}
+          onLongPress={() => router.navigate('/compare')}
+          style={styles.action}
+          accessibilityRole="button"
+          accessibilityState={{ selected: compareIds.includes(d.id) }}>
+          <Ionicons name={compareIds.includes(d.id) ? 'git-compare' : 'git-compare-outline'} size={24} color={compareIds.includes(d.id) ? c.primary : c.text} />
+          <Text style={{ color: c.text, fontSize: 12, fontWeight: '600' }}>{compareIds.includes(d.id) ? `비교 ${compareIds.length}/3` : '비교'}</Text>
         </Pressable>
         <Pressable
           onPress={() =>

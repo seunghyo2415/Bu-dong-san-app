@@ -188,4 +188,9 @@ export interface DataSource {
   /** 이름·주소·동으로 단지 후보 (점수 높은 순) */
   findCandidates(q: CandidateQuery): Promise<ComplexCandidate[]>;
   community: CommunitySource;
+  /** 계산기 정책값 (DB policy_values). 없으면 null → 앱 기본값 */
+  getPolicy(): Promise<{ value: Record<string, unknown>; effectiveFrom: string; verifiedAt: string | null } | null>;
+  /** 푸시 토큰 등록·관심 단지 알림 구독 (실데이터 모드에서만) */
+  registerPushToken(token: string, platform: string): Promise<void>;
+  setTradeAlert(complexId: string, on: boolean): Promise<void>;
 }

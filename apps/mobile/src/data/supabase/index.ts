@@ -21,6 +21,18 @@ const box = (b: BBox) => ({ sw_lat: b.sw.lat, sw_lng: b.sw.lng, ne_lat: b.ne.lat
 export const supabaseDataSource: DataSource = {
   mode: 'supabase',
   community: supabaseCommunity,
+  getPolicy: () => rpc('current_policy', { p_key: 'calculators' }),
+  async registerPushToken(token, platform) {
+    const u = (await supabase().auth.getUser()).data.user ?? (await supabase().auth.signInAnonymously()).data.user;
+    if (!u) return;
+    await supabase().from('push_tokens').upsert({ user_id: u.id, token, platform, updated_at: new Date().toISOString() });
+  },
+  async setTradeAlert(complexId, on) {
+    const u = (await supabase().auth.getUser()).data.user;
+    if (!u) return;
+    if (on) await supabase().from('alert_subscriptions').upsert({ user_id: u.id, complex_id: complexId });
+    else await supabase().from('alert_subscriptions').delete().eq('user_id', u.id).eq('complex_id', complexId);
+  },
   getMapMarkers: (bbox, mode, filters) => rpc<MapMarker[]>('map_markers', { ...box(bbox), mode, filters }),
   listComplexes: (bbox, filters) => rpc<ComplexSummary[]>('list_complexes', { filters, ...(bbox ? box(bbox) : {}) }),
   getComplexSummary: (id) => rpc<ComplexSummary | null>('complex_summary', { p_id: id }),

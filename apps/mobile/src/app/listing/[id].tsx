@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { Card, EmptyState, Row } from '@/components/ui';
+import { Checklist } from '@/features/listings/Checklist';
 import { DEAL_LABEL, listingPriceText } from '@/features/listings/format';
 import { useListings } from '@/stores/listings';
 import { radius, space, usePalette } from '@/theme/colors';
@@ -66,6 +67,8 @@ export default function ListingScreen() {
         />
         <Text style={{ color: c.textSub, fontSize: 12, marginTop: 4 }}>입력칸을 벗어나면 자동 저장돼요. (이 폰에만)</Text>
       </Card>
+
+      <Checklist listing={listing} />
     </ScrollView>
   );
 }

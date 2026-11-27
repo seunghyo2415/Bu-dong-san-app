@@ -21,6 +21,15 @@ export default function HomeScreen() {
   const byId = new Map<string, ComplexSummary>();
   summaries.forEach((r) => r.data && byId.set(r.data.id, r.data));
   const favItems = favorites.map((id) => byId.get(id)).filter((x): x is ComplexSummary => !!x);
+  // 관심 단지 새 실거래: 마지막으로 본 날 이후 계약된 매매 (해제 제외)
+  const lastSeen = useAppStore((s) => s.lastSeenTrade);
+  const favTrades = useQueries({ queries: favorites.map((id) => ({ queryKey: ['trades', id], queryFn: () => dataSource.getTrades(id) })) });
+  const newCount = new Map<string, number>();
+  favorites.forEach((id, i) => {
+    const seen = lastSeen[id];
+    const t = favTrades[i]?.data;
+    if (seen && t) newCount.set(id, t.filter((x) => x.dealType === 'sale' && !x.canceled && x.date > seen).length);
+  });
   const recentItems = recentViews
     .filter((id) => !favorites.includes(id))
     .slice(0, 5)
@@ -75,7 +84,14 @@ export default function HomeScreen() {
       <View>
         <Text style={[styles.h2, { color: c.text, marginBottom: space.sm }]}>⭐ 즐겨찾기</Text>
         {favItems.length ? (
-          favItems.map((it) => <ComplexListItem key={it.id} item={it} />)
+          favItems.map((it) => (
+            <View key={it.id}>
+              {newCount.get(it.id) ? (
+                <Text style={{ color: c.bad, fontWeight: '800', fontSize: 13, marginBottom: 4 }}>● 새 실거래 {newCount.get(it.id)}건</Text>
+              ) : null}
+              <ComplexListItem item={it} />
+            </View>
+          ))
         ) : (
           <Text style={{ color: c.textSub, lineHeight: 20 }}>단지 상세 화면 아래 ☆ 버튼을 누르면 여기에 모여요.</Text>
         )}

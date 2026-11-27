@@ -38,3 +38,12 @@ select cron.schedule('complexes-31200', '40 19 * * 0', $$ select public.call_ing
 select cron.schedule('complexes-31710', '43 19 * * 0', $$ select public.call_ingest('{"job":"complexes","sigungus":["31710"]}') $$);
 -- 매월 1일 건축물대장
 select cron.schedule('buildings-monthly', '53 19 1 * *', $$ select public.call_ingest('{"job":"buildings"}') $$);
+
+-- 관심 단지 새 실거래 푸시 (한국 07:03, 실거래 수집 끝난 뒤)
+select cron.schedule('notify-daily', '3 22 * * *', $$
+  select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/notify',
+    headers := jsonb_build_object('Content-Type', 'application/json',
+      'x-ingest-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'ingest_secret')),
+    body := '{}'::jsonb, timeout_milliseconds := 60000)
+$$);

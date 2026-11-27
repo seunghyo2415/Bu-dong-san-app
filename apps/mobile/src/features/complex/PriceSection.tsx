@@ -10,6 +10,7 @@ import {
   withinYears,
 } from '@ulsan/shared';
 import { useQuery } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
@@ -127,7 +128,16 @@ export function PriceSection({ d }: { d: ComplexDetail }) {
                     tip={<InfoTip term="전세가율" />}
                   />
                 ) : null}
-                <Row label="공시가격" value="4단계에서 데이터 확인 후 표시" />
+                <Row label="공시가격" value="데이터 확인 후 표시 예정" />
+                {deal === 'sale' ? (
+                  <Pressable
+                    onPress={() =>
+                      router.push({ pathname: '/calculators', params: { price: String(view.latest!.price), area: String(area), jeonse: view.lastJeonse ? String(view.lastJeonse.price) : '' } })
+                    }
+                    style={{ marginTop: space.sm }}>
+                    <Text style={{ color: c.primary, fontWeight: '700' }}>이 가격으로 취득세·대출 계산하기 ›</Text>
+                  </Pressable>
+                ) : null}
               </View>
             ) : null}
           </Card>

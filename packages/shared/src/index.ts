@@ -6,3 +6,5 @@ export * from './share-parse';
 export * from './commute';
 export * from './xlsx';
 export * from './community';
+export * from './calc';
+export * from './policy';

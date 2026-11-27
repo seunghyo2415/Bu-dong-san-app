@@ -29,6 +29,12 @@ type AppState = {
   addWorkplace: (w: Omit<Workplace, 'id'>) => void;
   removeWorkplace: (id: string) => void;
 
+  compareIds: string[]; // 비교함 (최대 3)
+  toggleCompare: (id: string) => 'added' | 'removed' | 'full';
+  /** 관심 단지별 마지막으로 확인한 실거래 날짜 (홈의 '새 실거래' 표시용) */
+  lastSeenTrade: Record<string, string>;
+  markSeen: (id: string, date: string) => void;
+
   favorites: string[]; // 단지 id
   toggleFavorite: (id: string) => void;
   recentViews: string[]; // 최근 본 단지 id (최신순 20개)
@@ -46,7 +52,7 @@ const NEXT_LABEL: Record<PriceLabel, PriceLabel> = { price: 'pyeong', pyeong: 'n
 
 export const useAppStore = create<AppState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       filters: {},
       setFilters: (filters) => set({ filters }),
       resetFilters: () => set({ filters: {} }),
@@ -68,6 +74,20 @@ export const useAppStore = create<AppState>()(
       workplaces: [],
       addWorkplace: (w) => set((s) => ({ workplaces: [...s.workplaces, { ...w, id: Date.now().toString(36) }] })),
       removeWorkplace: (id) => set((s) => ({ workplaces: s.workplaces.filter((x) => x.id !== id) })),
+
+      compareIds: [],
+      toggleCompare: (id) => {
+        const cur = get().compareIds;
+        if (cur.includes(id)) {
+          set({ compareIds: cur.filter((x) => x !== id) });
+          return 'removed';
+        }
+        if (cur.length >= 3) return 'full';
+        set({ compareIds: [...cur, id] });
+        return 'added';
+      },
+      lastSeenTrade: {},
+      markSeen: (id, date) => set((s) => ({ lastSeenTrade: { ...s.lastSeenTrade, [id]: date } })),
 
       favorites: [],
       toggleFavorite: (id) =>
@@ -91,8 +111,10 @@ export const useAppStore = create<AppState>()(
       name: 'app-store',
       storage: createJSONStorage(() => AsyncStorage),
       // 지도 이동 요청은 저장하지 않음
-      partialize: ({ filters, priceLabel, viewMode, recentSearches, favorites, recentViews, memos, workplaces }) => ({
+      partialize: ({ filters, priceLabel, viewMode, recentSearches, favorites, recentViews, memos, workplaces, compareIds, lastSeenTrade }) => ({
         workplaces,
+        compareIds,
+        lastSeenTrade,
         filters,
         priceLabel,
         viewMode,

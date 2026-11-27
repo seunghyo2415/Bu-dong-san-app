@@ -2,3 +2,6 @@
 [functions.ingest]
 # 우리만의 비밀값(x-ingest-secret)으로 보호하므로 로그인 토큰 검사는 끔
 verify_jwt = false
+
+[functions.notify]
+verify_jwt = false

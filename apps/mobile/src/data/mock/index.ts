@@ -56,6 +56,11 @@ function dice(a: string, b: string) {
 export const mockDataSource: DataSource = {
   mode: 'mock',
   community: mockCommunity,
+  async getPolicy() {
+    return null; // 앱 기본값(DEFAULT_POLICY) 사용
+  },
+  async registerPushToken() {},
+  async setTradeAlert() {},
 
   async getMapMarkers(bbox, mode, filters) {
     await delay(120);

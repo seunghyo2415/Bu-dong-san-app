@@ -4,10 +4,12 @@ import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider } from 'expo-rout
 import { ShareIntentProvider, useShareIntentContext } from 'expo-share-intent';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { useColorScheme } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { KakaoServicesProvider } from '@/features/places/KakaoServices';
+import * as Notifications from 'expo-notifications';
+import '@/features/alerts/push';
 
 // 공유 수신 네이티브 모듈은 개발용 앱(APK)·정식 앱에만 있고 Expo Go 에는 없다 → 없으면 끔
 const isExpoGo = !requireOptionalNativeModule('ExpoShareIntentModule');
@@ -24,6 +26,16 @@ function ShareIntentRouter() {
   return null;
 }
 
+/** 새 실거래 알림을 누르면 그 단지 상세로 */
+function NotificationRouter() {
+  const last = Notifications.useLastNotificationResponse();
+  useEffect(() => {
+    const id = last?.notification.request.content.data?.complexId;
+    if (typeof id === 'string') router.push(`/complex/${id}`);
+  }, [last]);
+  return null;
+}
+
 export default function RootLayout() {
   const scheme = useColorScheme();
   const [queryClient] = useState(
@@ -35,6 +47,7 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <KakaoServicesProvider>
         {isExpoGo ? null : <ShareIntentRouter />}
+        {Platform.OS === 'web' ? null : <NotificationRouter />}
         <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
           <StatusBar style="auto" />
           <Stack screenOptions={{ headerBackButtonDisplayMode: 'minimal' }}>
@@ -46,6 +59,8 @@ export default function RootLayout() {
             <Stack.Screen name="roadview" options={{ title: '로드뷰' }} />
             <Stack.Screen name="commute" options={{ title: '통근버스 노선' }} />
             <Stack.Screen name="workplaces" options={{ title: '내 직장' }} />
+            <Stack.Screen name="calculators" options={{ title: '계산기' }} />
+            <Stack.Screen name="about" options={{ title: '안내' }} />
           </Stack>
         </ThemeProvider>
         </KakaoServicesProvider>
