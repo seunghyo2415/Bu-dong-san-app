@@ -59,7 +59,7 @@ export function buildKakaoMapHtml(opts: {
 <script>
 (function () {
   var INIT = ${init};
-  var map = null, overlays = [], meOverlay = null, busObjs = [], busTip = null;
+  var map = null, meOverlay = null, busObjs = [], busTip = null;
   if (INIT.dark) document.body.classList.add('dark');
 
   function send(msg) {
@@ -88,34 +88,39 @@ export function buildKakaoMapHtml(opts: {
     return d;
   }
 
-  function clearOverlays() {
-    overlays.forEach(function (o) { o.setMap(null); });
-    overlays = [];
+  // 마커를 id 로 기억해 두고, 바뀐 것만 지우고/추가한다 (지도를 움직일 때 깜빡임·버벅임 줄이기)
+  var byKey = {};
+  function markerKey(m, priceLabel) {
+    return m.kind + ':' + m.id + ':' + (m.kind === 'region' ? m.count + ':' + m.avgPricePerPyeong : priceLabel + ':' + m.recentPrice);
   }
-
-  function setMarkers(markers, priceLabel) {
-    clearOverlays();
-    markers.forEach(function (m) {
-      var node;
-      if (m.kind === 'region') {
-        var sub = m.avgPricePerPyeong != null ? '평당 ' + fmtPrice(m.avgPricePerPyeong) : '';
-        node = el('rg', [['b', '', m.name + ' ' + m.count + '단지'], ['span', 's', sub]]);
-      } else {
-        var main = priceLabel === 'price' ? fmtPrice(m.recentPrice)
-                 : priceLabel === 'pyeong' ? '평당 ' + fmtPrice(m.pricePerPyeong) : '';
-        node = el('cx', main ? [['b', '', main], ['div', 'n', m.name]] : [['div', 'n', m.name]]);
-      }
-      node.addEventListener('click', function (ev) {
-        ev.stopPropagation();
-        send({ type: 'markerPress', id: m.id, kind: m.kind, lat: m.location.lat, lng: m.location.lng });
-      });
-      var o = new kakao.maps.CustomOverlay({
-        position: new kakao.maps.LatLng(m.location.lat, m.location.lng),
-        content: node, yAnchor: 1, clickable: true, zIndex: m.kind === 'region' ? 2 : 3
-      });
-      o.setMap(map);
-      overlays.push(o);
+  function makeOverlay(m, priceLabel) {
+    var node;
+    if (m.kind === 'region') {
+      var sub = m.avgPricePerPyeong != null ? '평당 ' + fmtPrice(m.avgPricePerPyeong) : '';
+      node = el('rg', [['b', '', m.name + ' ' + m.count + '단지'], ['span', 's', sub]]);
+    } else {
+      var main = priceLabel === 'price' ? fmtPrice(m.recentPrice)
+               : priceLabel === 'pyeong' ? '평당 ' + fmtPrice(m.pricePerPyeong) : '';
+      node = el('cx', main ? [['b', '', main], ['div', 'n', m.name]] : [['div', 'n', m.name]]);
+    }
+    node.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      send({ type: 'markerPress', id: m.id, kind: m.kind, lat: m.location.lat, lng: m.location.lng });
     });
+    return new kakao.maps.CustomOverlay({
+      position: new kakao.maps.LatLng(m.location.lat, m.location.lng),
+      content: node, yAnchor: 1, clickable: true, zIndex: m.kind === 'region' ? 2 : 3
+    });
+  }
+  function setMarkers(markers, priceLabel) {
+    var next = {};
+    markers.forEach(function (m) {
+      var k = markerKey(m, priceLabel);
+      next[k] = byKey[k] || makeOverlay(m, priceLabel);
+      if (!byKey[k]) next[k].setMap(map);
+    });
+    Object.keys(byKey).forEach(function (k) { if (!next[k]) byKey[k].setMap(null); });
+    byKey = next;
   }
 
   function reportIdle() {

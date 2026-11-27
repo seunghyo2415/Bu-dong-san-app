@@ -429,3 +429,10 @@ match_failures(id, source text, raw jsonb, candidates jsonb, reason text, resolv
 - **비교**: 최대 3곳, 표에서 항목별 유리한 값 초록색. 관리비는 K-apt 관리비 API 연결 전이라 "연결 예정".
 - **알림**: ① 서버 푸시 — `alert_subscriptions` + `push_tokens` + `pending_trade_alerts()` + `notify` 함수(매일 수집 뒤, Expo Push). 실데이터 모드 + 개발용/정식 앱 + EAS projectId 필요. ② 앱 안 표시 — 홈 즐겨찾기에 "마지막으로 본 뒤 계약된 새 실거래 n건"(서버 없이도 동작).
 - **임장 체크리스트**: 10개 항목 좋음/아쉬움 + 메모, 사진(카메라·앨범 → 앱 문서 폴더에 복사, 매물 삭제 시 같이 삭제). 폰에만 저장.
+
+## 18. 9단계 구현 메모 (마무리)
+
+- 지도 성능: 서버는 구·군/동 집계 + 화면 안 단지 최대 400개, 지도 WebView 는 마커를 id 로 기억해 **바뀐 것만** 추가·삭제 (가짜 카카오 SDK 로 브라우저에서 동작 확인).
+- 오류 처리: Expo Router `ErrorBoundary` 로 어떤 화면 오류도 "다시 시도" 안내, 데이터 조회 실패는 화면마다 안내 + 다시 시도, 공유 링크·장소 검색 실패는 다음 단계로 넘어감.
+- 테스트: 공용 규칙 65 · 수집기/서버 23 · SQL 4묶음(수집·매칭·후보·커뮤니티 권한·정책·알림) · GitHub Actions(PostGIS 서비스 컨테이너)에서 자동 실행.
+- 빌드: `eas.json` (development=APK+dev client, preview=APK, production=AAB), 앱 공개값은 EAS 환경변수. 권한: 위치·카메라만(마이크 차단).

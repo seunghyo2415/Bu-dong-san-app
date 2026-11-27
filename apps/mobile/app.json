@@ -2,7 +2,7 @@
   "expo": {
     "name": "내가 만든 부동산 앱",
     "slug": "my-realestate-app",
-    "version": "1.0.0",
+    "version": "0.9.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myrealestate",
@@ -19,7 +19,15 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.myrealestate.ulsan"
+      "package": "com.myrealestate.ulsan",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "single",
@@ -52,6 +60,20 @@
             "NSExtensionActivationSupportsWebURLWithMaxCount": 1,
             "NSExtensionActivationSupportsWebPageWithMaxCount": 1
           }
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "임장 사진을 매물에 첨부하려고 사진에 접근해요.",
+          "cameraPermission": "임장 사진을 찍으려고 카메라를 사용해요.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "trades"
         }
       ]
     ],

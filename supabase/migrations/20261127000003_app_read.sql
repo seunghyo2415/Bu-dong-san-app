@@ -111,9 +111,11 @@ language sql stable as $$
     select jsonb_build_object('kind', 'complex', 'id', s.id, 'name', s.name,
              'location', jsonb_build_object('lat', extensions.st_y(s.location::extensions.geometry), 'lng', extensions.st_x(s.location::extensions.geometry)),
              'recentPrice', s.last_price, 'pricePerPyeong', s.price_per_pyeong) x
-    from s
-    where mode = 'complex'
-      and extensions.st_intersects(s.location::extensions.geometry, public.bbox_geom(sw_lat, sw_lng, ne_lat, ne_lng))
+    from (select * from s
+          where mode = 'complex'
+            and extensions.st_intersects(s.location::extensions.geometry, public.bbox_geom(sw_lat, sw_lng, ne_lat, ne_lng))
+          order by s.households desc nulls last
+          limit 400) s  -- 한 화면 최대 400개 (성능)
     union all
     -- 동 단위
     select jsonb_build_object('kind', 'region', 'id', 'dong:' || r.code, 'name', r.name,

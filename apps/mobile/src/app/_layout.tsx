@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { Platform, useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { ErrorView } from '@/components/ErrorView';
 import { KakaoServicesProvider } from '@/features/places/KakaoServices';
 import * as Notifications from 'expo-notifications';
 import '@/features/alerts/push';
@@ -24,6 +25,11 @@ function ShareIntentRouter() {
     resetShareIntent();
   }, [hasShareIntent, shareIntent, resetShareIntent]);
   return null;
+}
+
+/** Expo Router 오류 경계: 어떤 화면에서 오류가 나도 안내 화면을 보여줌 */
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Promise<void> }) {
+  return <ErrorView error={error} retry={() => void retry()} />;
 }
 
 /** 새 실거래 알림을 누르면 그 단지 상세로 */
