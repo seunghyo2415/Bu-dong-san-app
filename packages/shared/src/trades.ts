@@ -66,3 +66,29 @@ export function withinYears<T extends TradePoint>(trades: T[], years: number | n
 export function priceDiffRatio(a: number, b: number): number {
   return b > 0 ? (a - b) / b : NaN;
 }
+
+export type ComparableTrade = TradePoint & { exclusiveM2: number; dealType: 'sale' | 'jeonse' | 'monthly' };
+
+/**
+ * 매물 가격을 최근 실거래와 비교. 같은 거래유형·전용면적 ±3㎡·최근 6개월(없으면 12개월) 거래의 중간값 기준.
+ * 반환 ratio 0.032 → "최근 실거래 대비 +3.2%"
+ */
+export function compareToRecentTrades(
+  listing: { price: number; dealType: 'sale' | 'jeonse' | 'monthly'; areaM2: number | null },
+  trades: ComparableTrade[],
+  today: string,
+): { ratio: number; basis: number; count: number; months: number } | null {
+  if (listing.dealType === 'monthly' || !listing.price) return null;
+  const pool = validTrades(trades).filter(
+    (t) => t.dealType === listing.dealType && (listing.areaM2 == null || Math.abs(t.exclusiveM2 - listing.areaM2) <= 3),
+  );
+  for (const months of [6, 12]) {
+    const d = new Date(today + 'T00:00:00Z');
+    d.setUTCMonth(d.getUTCMonth() - months);
+    const from = d.toISOString().slice(0, 10);
+    const recent = pool.filter((t) => t.date >= from);
+    const basis = median(recent.map((t) => t.price));
+    if (basis) return { ratio: priceDiffRatio(listing.price, basis), basis, count: recent.length, months };
+  }
+  return null;
+}

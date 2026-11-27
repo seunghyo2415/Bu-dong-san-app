@@ -132,6 +132,18 @@ export type ComplexDetail = ComplexSummary & {
   };
 };
 
+/** 공유 매물 → 단지 후보 */
+export type ComplexCandidate = {
+  id: string;
+  name: string;
+  subtitle: string;
+  location: LatLng | null;
+  distanceM: number | null;
+  score: number;
+};
+
+export type CandidateQuery = { name?: string | null; address?: string | null; dong?: string | null };
+
 export interface DataSource {
   readonly mode: 'mock' | 'supabase';
   getMapMarkers(bbox: BBox, mode: MapLevelMode, filters: ComplexFilters): Promise<MapMarker[]>;
@@ -141,4 +153,6 @@ export interface DataSource {
   getTrades(id: string): Promise<Trade[]>;
   search(query: string): Promise<SearchResult[]>;
   getRegionSummaries(): Promise<RegionSummary[]>;
+  /** 이름·주소·동으로 단지 후보 (점수 높은 순) */
+  findCandidates(q: CandidateQuery): Promise<ComplexCandidate[]>;
 }

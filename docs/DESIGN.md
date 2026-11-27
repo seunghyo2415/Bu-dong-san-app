@@ -396,3 +396,11 @@ match_failures(id, source text, raw jsonb, candidates jsonb, reason text, resolv
 - **요약은 머티리얼라이즈드 뷰**(`complex_summary_mv`): 대표 평형 = 최근 3년 매매가 가장 많은 전용면적. 수집 후 `refresh_summaries()`.
 - **주차 타입 변경**: K-apt 는 지상/지하만, 건축물대장만 자주식/기계식 → 앱 `ParkingFact` 를 `ground/underground + (선택) 4구분` 으로.
 - **테스트**: `npm test`(파싱·정리·호출 재시도), `npm run test:db`(로컬 PostGIS 에서 수집→매칭→조회), `TEST_DATABASE_URL=… npm test -w ingest`(가짜 API → 실제 DB 끝-끝).
+
+## 14. 5단계 구현 메모 (공유 수신)
+
+- `expo-share-intent@9` (SDK 58 호환). Android `text/*` 공유 대상 등록, iOS Share Extension 설정 포함. **Expo Go 에는 네이티브 모듈이 없어 자동으로 꺼짐** → 공유 테스트는 개발용 APK 필요. 대신 매물함 탭의 「붙여넣기 → 분석」으로 Expo Go 에서도 같은 흐름 확인 가능.
+- 주소 파악 순서: ① 공유 글 해석(`packages/shared/src/share-parse.ts`) ② 부족하면 링크의 **공개 미리보기(OG 태그)만** 읽기 — 허용 사이트(당근)·단건·6초 제한·본문 저장 안 함. 설계의 "백엔드에서 읽기" 대신 **휴대폰에서 직접** 읽도록 변경(서버 비용 없음, 키 없이 동작, 사용자가 보던 공개 페이지). ③ "어느 건물인가요?" 후보 선택 (`find_complex_candidates`: 이름 유사도 + 카카오 좌표 거리).
+- 실거래 비교: 같은 거래유형 · 전용 ±3㎡ · 최근 6개월(없으면 12개월) 중간값 대비 % (`compareToRecentTrades`).
+- 내 매물함은 폰에만 저장 (로그인 후 서버 동기화는 7단계 계정 기능과 함께 검토).
+- 외부 매물: 크롤링 없이 단지명 복사 + 사이트 열기만.

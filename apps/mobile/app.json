@@ -40,6 +40,19 @@
         {
           "locationWhenInUsePermission": "내 주변 단지를 지도에 보여주기 위해 현재 위치를 사용해요."
         }
+      ],
+      [
+        "expo-share-intent",
+        {
+          "androidIntentFilters": [
+            "text/*"
+          ],
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsText": true,
+            "NSExtensionActivationSupportsWebURLWithMaxCount": 1,
+            "NSExtensionActivationSupportsWebPageWithMaxCount": 1
+          }
+        }
       ]
     ],
     "experiments": {

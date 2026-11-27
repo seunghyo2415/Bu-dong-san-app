@@ -8,19 +8,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState, MockBadge, Skeleton } from '@/components/ui';
 import { dataSource } from '@/data';
 import { InfoSection } from '@/features/complex/InfoSection';
+import { ListingsSection } from '@/features/complex/ListingsSection';
 import { ParkingSection } from '@/features/complex/ParkingSection';
 import { PriceSection } from '@/features/complex/PriceSection';
 import { SummarySection } from '@/features/complex/SummarySection';
 import { useAppStore } from '@/stores/app-store';
 import { radius, space, usePalette } from '@/theme/colors';
 
-const SECTIONS = ['요약', '주차', '시세', '정보'] as const;
+const SECTIONS = ['요약', '주차', '시세', '매물', '정보'] as const;
 type Section = (typeof SECTIONS)[number];
 
 export default function ComplexScreen() {
   const c = usePalette();
   const insets = useSafeAreaInsets();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, savedListing } = useLocalSearchParams<{ id: string; savedListing?: string }>();
   const q = useQuery({ queryKey: ['complex-detail', id], queryFn: () => dataSource.getComplexDetail(id) });
   const { favorites, toggleFavorite, addRecentView, memos, setMemo } = useAppStore();
   const scrollRef = useRef<ScrollViewInstance>(null);
@@ -104,8 +105,13 @@ export default function ComplexScreen() {
           for (const s of SECTIONS) if (offsetOf(s) <= y) cur = s;
           if (cur !== active) setActive(cur);
         }}>
-        <View onLayout={mark('badge')}>
+        <View onLayout={mark('badge')} style={{ gap: space.sm }}>
           <MockBadge />
+          {savedListing ? (
+            <Pressable onPress={() => jump('매물')} style={[styles.memo, { backgroundColor: c.chip, marginTop: 0 }]}>
+              <Text style={{ color: c.good, fontWeight: '800' }}>✓ 내 매물함에 저장했어요 · 실거래 비교 보기</Text>
+            </Pressable>
+          ) : null}
         </View>
         <View onLayout={mark('요약')}>
           <SummarySection d={d} />
@@ -120,6 +126,9 @@ export default function ComplexScreen() {
         </View>
         <View onLayout={mark('시세')}>
           <PriceSection d={d} />
+        </View>
+        <View onLayout={mark('매물')}>
+          <ListingsSection d={d} />
         </View>
         <View onLayout={mark('정보')}>
           <InfoSection d={d} />

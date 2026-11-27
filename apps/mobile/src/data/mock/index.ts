@@ -38,8 +38,19 @@ function avg(nums: number[]): number | null {
   return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null;
 }
 
-/** 한글 검색: 공백 무시, 초성 검색은 나중에 */
-const norm = (s: string) => s.replace(/\s+/g, '').toLowerCase();
+/** 한글 검색: 공백·"아파트" 무시 */
+const norm = (s: string) => s.replace(/\s+|아파트|apt/gi, '').toLowerCase();
+
+/** 두 글자 묶음(bigram) 유사도 0~1 */
+function dice(a: string, b: string) {
+  if (!a || !b) return 0;
+  const grams = (s: string) => new Set(Array.from({ length: Math.max(1, s.length - 1) }, (_, i) => s.slice(i, i + 2)));
+  const A = grams(a);
+  const B = grams(b);
+  let hit = 0;
+  A.forEach((g) => B.has(g) && hit++);
+  return (2 * hit) / (A.size + B.size);
+}
 
 export const mockDataSource: DataSource = {
   mode: 'mock',
@@ -124,6 +135,29 @@ export const mockDataSource: DataSource = {
       location: { lat: d.lat, lng: d.lng },
     }));
     return [...dongs, ...complexes].slice(0, 20);
+  },
+
+  async findCandidates({ name, address, dong }) {
+    await delay(200);
+    const n = norm(name ?? '');
+    const d = dong ?? MOCK_DONGS.find((x) => (address ?? '').includes(x.dongName))?.dongName ?? null;
+    return MOCK_COMPLEXES.map((c) => {
+      const cn = norm(c.name);
+      const nameScore = n ? dice(cn, n) + (cn.includes(n) || n.includes(cn) ? 0.3 : 0) : 0;
+      const dongScore = d && c.dongName === d ? 0.3 : 0;
+      return { c, score: nameScore + dongScore };
+    })
+      .filter((x) => x.score >= 0.25)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8)
+      .map(({ c, score }) => ({
+        id: c.id,
+        name: c.name,
+        subtitle: `${c.dongName} · ${c.households.toLocaleString()}세대`,
+        location: c.location,
+        distanceM: null,
+        score: Math.round(score * 100) / 100,
+      }));
   },
 
   async getRegionSummaries() {
