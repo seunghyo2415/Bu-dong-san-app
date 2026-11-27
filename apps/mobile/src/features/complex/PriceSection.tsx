@@ -75,7 +75,11 @@ export function PriceSection({ d }: { d: ComplexDetail }) {
       </ScrollView>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
         <Text style={{ color: c.textSub, fontSize: 13 }}>
-          {formatArea(area)} · 공급 {d.areaTypes.find((a) => a.exclusiveM2 === area)?.supplyM2}㎡ · {d.areaTypes.find((a) => a.exclusiveM2 === area)?.households}세대
+          {formatArea(area)}
+          {(() => {
+            const a = d.areaTypes.find((x) => x.exclusiveM2 === area);
+            return `${a?.supplyM2 ? ` · 공급 ${a.supplyM2}㎡` : ''}${a?.households ? ` · ${a.households}세대` : ''}`;
+          })()}
         </Text>
         <InfoTip term="전용면적" />
       </View>

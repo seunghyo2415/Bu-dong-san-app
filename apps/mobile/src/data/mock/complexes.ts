@@ -2,7 +2,7 @@
  * ⚠️ 목업 데이터 — 단지명·가격·세대수·주차·거래 내역은 모두 지어낸 값입니다.
  * 동 이름과 대략적인 위치만 실제 울산 지명을 따랐습니다.
  */
-import { latestTrade, parkingPerHousehold, pricePerPyeong, rankAmong, summarizeParking } from '@ulsan/shared';
+import { latestTrade, parkingPerHousehold, pricePerPyeong, rankAmong } from '@ulsan/shared';
 
 import type { AreaType, ComplexDetail, ComplexSummary, ParkingFact, ParkingReview, Trade } from '../types';
 import { seeded } from './seed';
@@ -98,7 +98,7 @@ function genTrades(id: string, areas: AreaType[], perM2Now: number, jeonseBase: 
     const idx = marketIndex(y, m) / nowIdx;
     const maxDay = y === END.y && m === END.m ? 20 : 28;
     for (const a of areas) {
-      const weight = Math.min(1.6, a.households / 300);
+      const weight = Math.min(1.6, (a.households ?? 300) / 300);
       for (const dealType of ['sale', 'jeonse', 'monthly'] as const) {
         const p = dealType === 'sale' ? 0.45 : dealType === 'jeonse' ? 0.35 : 0.12;
         let count = 0;
@@ -172,24 +172,27 @@ function build() {
       const mechShare = year < 2005 && rand() < 0.35 ? 0.1 + rand() * 0.2 : 0;
       const indoor = Math.round(total * indoorShare);
       const indoorMech = Math.round(indoor * mechShare);
+      // K-apt 는 지상/지하만, 건축물대장은 자주식/기계식까지 (실제 공공데이터와 같은 구성)
       const kapt: ParkingFact = {
         source: 'kapt',
         sourceLabel: '공동주택 상세정보(K-apt) · 목업',
         asOf: MOCK_AS_OF,
-        indoorSelf: indoor - indoorMech,
-        indoorMech,
-        outdoorSelf: total - indoor,
-        outdoorMech: 0,
+        ground: total - indoor,
+        underground: indoor,
       };
       // 건축물대장은 가끔 값이 다름 (기준 시점·집계 방식 차이 흉내)
       const drift = rand() < 0.3 ? 0.85 + rand() * 0.1 : 1;
+      const indoorSelf = Math.round((indoor - indoorMech) * drift);
+      const outdoorSelf = Math.round((total - indoor) * drift);
       const bldrgst: ParkingFact = {
         source: 'bldrgst',
         sourceLabel: '건축물대장 총괄표제부 · 목업',
         asOf: '2026-10-31',
-        indoorSelf: Math.round(kapt.indoorSelf * drift),
-        indoorMech: kapt.indoorMech,
-        outdoorSelf: Math.round(kapt.outdoorSelf * drift),
+        ground: outdoorSelf,
+        underground: indoorSelf + indoorMech,
+        indoorSelf,
+        indoorMech,
+        outdoorSelf,
         outdoorMech: 0,
       };
 
@@ -207,7 +210,7 @@ function build() {
         return { score: s, comment: REVIEW_TEXT[s][k % 2], date: `2026-${pad(11 - k * 2)}-${pad(3 + k * 7)}` };
       });
 
-      const perHousehold = parkingPerHousehold(summarizeParking(kapt).total, households);
+      const perHousehold = parkingPerHousehold(total, households);
       details.push({
         id,
         name,

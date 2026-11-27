@@ -1,10 +1,16 @@
 {
   "name": "my-realestate-app",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "ingest"
+  ],
   "scripts": {
     "start": "npm run start -w mobile",
-    "test": "npm run test -w @ulsan/shared",
-    "typecheck": "npm run typecheck -w mobile && npm run typecheck -w @ulsan/shared"
+    "test": "npm run test -w @ulsan/shared && npm run test -w ingest",
+    "test:db": "bash supabase/tests/run.sh",
+    "typecheck": "npm run typecheck -w mobile && npm run typecheck -w @ulsan/shared && npm run typecheck -w ingest",
+    "ingest": "npm run ingest -w ingest --"
   }
 }

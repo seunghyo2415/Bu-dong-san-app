@@ -386,3 +386,13 @@ match_failures(id, source text, raw jsonb, candidates jsonb, reason text, resolv
 - 옥내=지하, 옥외=지상으로 표시. 실제 데이터에서 예외(옥내 지상 주차 타워 등)가 있으면 4단계에서 표기 조정.
 - 실거래 통계(최근·최고가·월별 중간값)는 해제 거래를 제외 (`packages/shared/src/trades.ts`).
 - 용어 설명(ⓘ)은 `components/ui/InfoTip.tsx`의 GLOSSARY 에서 관리.
+
+## 13. 4단계 구현 메모 (실데이터 연결)
+
+- **공식 명세 확인 결과** (`docs/DATA_SOURCES.md`, 2026-11-27 추출): 공동주택 기본·상세는 **V5**(`AptBasisInfoServiceV5`), 단지 목록은 **`AptListService4`**. 주차는 K-apt `kaptdPcnt`(지상)·`kaptdPcntu`(지하), 건축물대장 `indrAutoUtcnt`·`indrMechUtcnt`·`oudrAutoUtcnt`·`oudrMechUtcnt`. 실거래는 `aptSeq`(단지 일련번호)·`cdealType`(해제)·`dealingGbn`(직거래) 제공.
+- **수집 위치**: 이 개발 환경(해외)에서는 `apis.data.go.kr` 연결이 끊김 → 매일 수집은 Supabase Edge Function 을 **서울 리전**으로 호출(`x-region: ap-northeast-2`), 처음 5년치는 사용자 PC 에서 `npm run ingest`.
+- **수집 코드 한 벌**: `supabase/functions/_shared`(외부 라이브러리 없음) 를 Edge Function(Deno)과 PC 명령(Node, `ingest/cli.ts`)이 같이 씀.
+- **매칭은 DB 함수에서**(`match_complex`): ① 별칭(aptSeq) ② 필지 PNU ③ 같은 법정동 이름 유사도(pg_trgm ≥ 0.45). 성공하면 aptSeq 별칭 저장, 실패는 `match_failures` 에 후보 3개와 함께. `rematch_unmatched()` 로 재시도.
+- **요약은 머티리얼라이즈드 뷰**(`complex_summary_mv`): 대표 평형 = 최근 3년 매매가 가장 많은 전용면적. 수집 후 `refresh_summaries()`.
+- **주차 타입 변경**: K-apt 는 지상/지하만, 건축물대장만 자주식/기계식 → 앱 `ParkingFact` 를 `ground/underground + (선택) 4구분` 으로.
+- **테스트**: `npm test`(파싱·정리·호출 재시도), `npm run test:db`(로컬 PostGIS 에서 수집→매칭→조회), `TEST_DATABASE_URL=… npm test -w ingest`(가짜 API → 실제 DB 끝-끝).

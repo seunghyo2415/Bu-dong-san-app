@@ -14,7 +14,8 @@ import { MOCK_AS_OF, MOCK_COMPLEXES, MOCK_DETAILS, MOCK_DONGS, MOCK_SOURCE, MOCK
 /** 실제 서버처럼 약간 늦게 응답 → 스켈레톤 UI 확인용 */
 const delay = (ms = 250) => new Promise((r) => setTimeout(r, ms));
 
-export function inBBox(c: { location: { lat: number; lng: number } }, b: BBox) {
+export function inBBox(c: { location: { lat: number; lng: number } | null }, b: BBox) {
+  if (!c.location) return false;
   const { lat, lng } = c.location;
   return lat >= b.sw.lat && lat <= b.ne.lat && lng >= b.sw.lng && lng <= b.ne.lng;
 }
@@ -53,7 +54,7 @@ export const mockDataSource: DataSource = {
           kind: 'complex',
           id: c.id,
           name: c.name,
-          location: c.location,
+          location: c.location!,
           recentPrice: c.recentPrice?.value ?? null,
           pricePerPyeong: c.pricePerPyeong,
         }));
@@ -108,12 +109,12 @@ export const mockDataSource: DataSource = {
     await delay(80);
     const q = norm(query);
     if (!q) return [];
-    const complexes: SearchResult[] = MOCK_COMPLEXES.filter((c) => norm(c.name).includes(q)).map((c) => ({
+    const complexes: SearchResult[] = MOCK_COMPLEXES.filter((c) => c.location && norm(c.name).includes(q)).map((c) => ({
       kind: 'complex',
       id: c.id,
       title: c.name,
       subtitle: `${sigunguName(c.sigunguCode)} ${c.dongName} · ${c.households.toLocaleString()}세대`,
-      location: c.location,
+      location: c.location!,
     }));
     const dongs: SearchResult[] = MOCK_DONGS.filter((d) => norm(d.dongName).includes(q)).map((d) => ({
       kind: 'dong',

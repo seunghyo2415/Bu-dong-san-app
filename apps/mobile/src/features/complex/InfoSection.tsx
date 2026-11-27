@@ -19,15 +19,16 @@ export function InfoSection({ d }: { d: ComplexDetail }) {
     <View style={{ gap: space.md }}>
       <SectionTitle title="단지 정보" />
       <Card>
-        <Row label="난방 방식" value={d.heating} />
-        <Row label="복도 형태" value={d.hallType} />
+        <Row label="난방 방식" value={d.heating ?? '정보 없음'} />
+        <Row label="복도 형태" value={d.hallType ?? '정보 없음'} />
+        {d.far != null ? <Row label="용적률 · 건폐율" value={`${d.far}% · ${d.bcr ?? '-'}%`} /> : null}
         <Row label="지번 주소" value={d.jibunAddress} />
         <Row label="사용승인일" value={d.approvedDate} />
       </Card>
       <Card>
         <Text style={{ color: c.text, fontSize: 16, fontWeight: '800', marginBottom: space.xs }}>평형 구성</Text>
         {d.areaTypes.map((a) => (
-          <Row key={a.exclusiveM2} label={`전용 ${formatArea(a.exclusiveM2)}`} value={`${a.households.toLocaleString()}세대`} />
+          <Row key={a.exclusiveM2} label={`전용 ${formatArea(a.exclusiveM2)}`} value={a.households != null ? `${a.households.toLocaleString()}세대` : '거래 있음'} />
         ))}
       </Card>
       <Card>

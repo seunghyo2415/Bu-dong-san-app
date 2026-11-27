@@ -4,7 +4,7 @@
 
 - 설계서: [docs/DESIGN.md](docs/DESIGN.md)
 - API 키 발급 안내: [docs/API_KEYS.md](docs/API_KEYS.md)
-- 지금 상태: **3단계 완료** (단지 상세: 요약 · 주차 상세 · 실거래 차트 — 목업 데이터)
+- 지금 상태: **4단계 코드 완료** (실데이터 수집·매칭·Supabase 연결 — 키 입력 후 동작, [docs/SETUP_SUPABASE.md](docs/SETUP_SUPABASE.md))
 
 ## 폴더
 

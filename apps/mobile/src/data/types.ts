@@ -17,7 +17,7 @@ export type ComplexSummary = {
   sigunguCode: string;
   dongName: string;
   roadAddress: string;
-  location: LatLng;
+  location: LatLng | null;
   houseType: HouseType;
   approvedDate: string; // YYYY-MM-DD 사용승인일
   households: number;
@@ -88,29 +88,38 @@ export type Trade = {
   canceled: boolean; // 해제(취소) 여부
 };
 
-export type AreaType = { exclusiveM2: number; supplyM2: number; households: number };
+export type AreaType = { exclusiveM2: number; supplyM2: number | null; households: number | null };
 
 export type ParkingSource = 'kapt' | 'bldrgst';
 
+/**
+ * 출처별 주차대수.
+ * - K-apt 상세정보: 지상(kaptdPcnt)·지하(kaptdPcntu)만 제공
+ * - 건축물대장: 옥내/옥외 × 자주식/기계식 4구분 제공 (옥내≈지하, 옥외≈지상으로 표시)
+ */
 export type ParkingFact = {
   source: ParkingSource;
   sourceLabel: string;
   asOf: string;
-  indoorSelf: number;
-  indoorMech: number;
-  outdoorSelf: number;
-  outdoorMech: number;
+  ground: number | null;
+  underground: number | null;
+  indoorSelf?: number | null;
+  indoorMech?: number | null;
+  outdoorSelf?: number | null;
+  outdoorMech?: number | null;
 };
 
 export type ParkingReview = { score: number; comment: string; date: string };
 
 export type ComplexDetail = ComplexSummary & {
   jibunAddress: string;
-  dongCount: number;
-  topFloor: number;
-  builder: string;
-  heating: string;
-  hallType: string;
+  dongCount: number | null;
+  topFloor: number | null;
+  builder: string | null;
+  heating: string | null;
+  hallType: string | null;
+  far?: number | null; // 용적률(%)
+  bcr?: number | null; // 건폐율(%)
   areaTypes: AreaType[];
   /** 대표 평형 최근 전세가 */
   recentJeonse: Sourced<number> | null;

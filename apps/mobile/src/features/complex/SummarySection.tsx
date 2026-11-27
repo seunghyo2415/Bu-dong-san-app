@@ -22,13 +22,15 @@ export function SummarySection({ d }: { d: ComplexDetail }) {
   const grade = p != null ? parkingGrade(p) : null;
   const ratio = d.recentPrice && d.recentJeonse ? jeonseRatio(d.recentJeonse.value, d.recentPrice.value) : NaN;
 
-  const facts: [string, string][] = [
-    ['입주', formatBuiltYear(d.approvedDate)],
-    ['세대수', `${d.households.toLocaleString()}세대`],
-    ['동 수', `${d.dongCount}개동`],
-    ['최고층', `${d.topFloor}층`],
-    ['시공사', d.builder],
-  ];
+  const facts = (
+    [
+      ['입주', d.approvedDate ? formatBuiltYear(d.approvedDate) : null],
+      ['세대수', d.households ? `${d.households.toLocaleString()}세대` : null],
+      ['동 수', d.dongCount != null ? `${d.dongCount}개동` : null],
+      ['최고층', d.topFloor != null ? `${d.topFloor}층` : null],
+      ['시공사', d.builder],
+    ] as [string, string | null][]
+  ).filter((x): x is [string, string] => !!x[1]);
 
   return (
     <View style={{ gap: space.md }}>
@@ -77,7 +79,7 @@ export function SummarySection({ d }: { d: ComplexDetail }) {
           <Text style={{ color: c.textSub, marginTop: 4 }}>주차 정보가 없어요</Text>
         )}
         <Text style={{ color: c.textSub, fontSize: 13 }}>
-          {d.parking.dongRank.dongName} {d.parking.dongRank.total}개 단지 중 {d.parking.dongRank.position}위 · 1.5대↑ 여유 / 1.0~1.5 보통 / 1.0↓ 부족
+          {d.parking.dongRank?.total ? `${d.parking.dongRank.dongName} ${d.parking.dongRank.total}개 단지 중 ${d.parking.dongRank.position}위 · ` : ''}1.5대↑ 여유 / 1.0~1.5 보통 / 1.0↓ 부족
         </Text>
       </Card>
       {d.recentPrice ? <SourceNote source={d.recentPrice.source} asOf={d.recentPrice.asOf} /> : null}
