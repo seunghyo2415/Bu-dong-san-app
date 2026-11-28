@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { CSV_TEMPLATE, listSheets, parseRouteCsv, parseRouteTable, parseStopLocationCsv, readXlsx, uniqueStops, type CommuteRoute } from '@ulsan/shared';
+import { CSV_TEMPLATE, formatDistance, haversineM, isWaypoint, listSheets, parseRouteCsv, parseRouteTable, parseStopLocationCsv, readXlsx, uniqueStops, type CommuteRoute } from '@ulsan/shared';
 import * as Clipboard from 'expo-clipboard';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
@@ -15,6 +15,22 @@ import { naverSearch } from '@/features/places/naver';
 import { useAppStore } from '@/stores/app-store';
 import { COMPANY_WORD, useCommute, type StopGeo } from '@/stores/commute';
 import { radius, space, usePalette } from '@/theme/colors';
+
+/** 정류장이 들어 있는 노선과 앞·뒤 정류장 (같은 이름 아파트가 많을 때 어디인지 알 수 있게) */
+type StopContext = { region: string; prev: string | null; next: string | null; prevLoc: { lat: number; lng: number } | null; nextLoc: { lat: number; lng: number } | null };
+function stopContexts(name: string, routes: CommuteRoute[], stops: Record<string, StopGeo>, company: { location: { lat: number; lng: number } | null }): StopContext[] {
+  const out: StopContext[] = [];
+  for (const r of routes) {
+    const list = r.stops.filter((x) => !isWaypoint(x));
+    const i = list.indexOf(name);
+    if (i < 0) continue;
+    const prev = i > 0 ? list[i - 1] : null;
+    const next = i < list.length - 1 ? list[i + 1] : null;
+    const locOf = (x: string | null) => (!x ? null : x === COMPANY_WORD ? company.location : stops[x]?.location ?? null);
+    if (!out.some((o) => o.region === r.region && o.prev === prev && o.next === next)) out.push({ region: r.region, prev, next, prevLoc: locOf(prev), nextLoc: locOf(next) });
+  }
+  return out;
+}
 
 async function readRoutes(asset: DocumentPicker.DocumentPickerAsset): Promise<CommuteRoute[]> {
   const file = new File(asset.uri);
@@ -184,6 +200,11 @@ export default function CommuteScreen() {
                   />
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: c.text, fontSize: 15 }}>{s}</Text>
+                    {stopContexts(s, routes, stops, company).slice(0, 2).map((cx, k) => (
+                      <Text key={k} style={{ color: c.textSub, fontSize: 12 }} numberOfLines={1}>
+                        [{cx.region}] {cx.prev ?? '출발'} ▸ <Text style={{ color: c.primary, fontWeight: '800' }}>●</Text> ▸ {cx.next ?? '도착'}
+                      </Text>
+                    ))}
                     {g?.placeName ? (
                       <Text style={{ color: c.textSub, fontSize: 12 }}>
                         → {g.placeName} {g.status === 'manual' ? '(직접 지정)' : g.status === 'estimated' ? '(앞뒤 정류장으로 추정)' : ''}
@@ -211,7 +232,11 @@ function FixStopModal({ name, onClose }: { name: string | null; onClose: () => v
   const c = usePalette();
   const insets = useSafeAreaInsets();
   const places = usePlaces();
-  const setStop = useCommute((s) => s.setStop);
+  const { setStop, routes, stops, company } = useCommute();
+  const ctx = name ? stopContexts(name, routes, stops, company) : [];
+  // 기준점: 앞 정류장(없으면 뒤 정류장) 위치
+  const anchor = ctx.map((x) => x.prevLoc ?? x.nextLoc).find(Boolean) ?? null;
+  const anchorName = ctx.find((x) => x.prevLoc)?.prev ?? ctx.find((x) => x.nextLoc)?.next ?? null;
   const [q, setQ] = useState('');
   const [results, setResults] = useState<Place[]>([]);
   const [loading, setLoading] = useState(false);
@@ -223,8 +248,16 @@ function FixStopModal({ name, onClose }: { name: string | null; onClose: () => v
       const t = query.trim();
       const full = /울산|부산|경주|양산|기장|정관|웅상|포항/.test(t) ? t : `울산 ${t}`;
       // 카카오 + 네이버 결과를 함께 (네이버에만 있는 작은 가게·정류장 이름 보충)
-      const [k, n] = await Promise.all([places.search({ kind: 'keyword', query: full }, { size: 10 }).then((r) => r.places).catch(() => []), naverSearch(full)]);
-      setResults([...k, ...n.filter((x) => !k.some((y) => y.name === x.name))]);
+      const [nearK, k, n] = await Promise.all([
+        anchor ? places.search({ kind: 'keyword', query: t }, { near: anchor, radius: 5000, size: 10, sort: 'accuracy' }).then((r) => r.places).catch(() => []) : Promise.resolve([] as Place[]),
+        places.search({ kind: 'keyword', query: full }, { size: 10 }).then((r) => r.places).catch(() => []),
+        naverSearch(full),
+      ]);
+      const merged: Place[] = [];
+      for (const x of [...nearK, ...k, ...n]) if (!merged.some((y) => y.name === x.name && Math.abs(y.lat - x.lat) < 0.0005)) merged.push(x);
+      // 노선(앞·뒤 정류장)에서 가까운 순
+      if (anchor) merged.sort((a, b) => haversineM(anchor, a) - haversineM(anchor, b));
+      setResults(merged);
     } catch {
       setResults([]);
     } finally {
@@ -237,6 +270,12 @@ function FixStopModal({ name, onClose }: { name: string | null; onClose: () => v
       <KeyboardSheet onClose={onClose}>
       <View style={{ backgroundColor: c.card, padding: space.lg, paddingBottom: insets.bottom + space.lg, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, maxHeight: '75%' }}>
         <Text style={{ color: c.text, fontSize: 17, fontWeight: '800' }}>「{name}」 위치 고르기</Text>
+        {ctx.slice(0, 3).map((cx, k) => (
+          <Text key={k} style={{ color: c.textSub, fontSize: 13, marginTop: 4 }}>
+            [{cx.region} 노선] {cx.prev ?? '출발'} ▸ <Text style={{ color: c.primary, fontWeight: '800' }}>여기</Text> ▸ {cx.next ?? '도착'}
+          </Text>
+        ))}
+        {anchorName ? <Text style={{ color: c.textSub, fontSize: 12, marginTop: 2 }}>「{anchorName}」 근처 결과를 먼저 보여드려요.</Text> : null}
         <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.md }}>
           <TextInput value={q} onChangeText={setQ} onSubmitEditing={() => run(q)} returnKeyType="search" style={{ flex: 1, color: c.text, borderWidth: 1, borderColor: c.border, borderRadius: radius.md, padding: space.md }} />
           <Pressable onPress={() => run(q)} style={{ justifyContent: 'center', paddingHorizontal: space.md }}>
@@ -256,6 +295,11 @@ function FixStopModal({ name, onClose }: { name: string | null; onClose: () => v
               <Text style={{ color: c.textSub, fontSize: 12 }}>
                 {p.address} · {p.category}
               </Text>
+              {anchor ? (
+                <Text style={{ color: haversineM(anchor, p) < 3000 ? c.good : c.warn, fontSize: 12, fontWeight: '700' }}>
+                  {anchorName === COMPANY_WORD ? '회사' : `「${anchorName}」`}에서 {formatDistance(haversineM(anchor, p))}
+                </Text>
+              ) : null}
             </Pressable>
           ))}
           {!loading && !results.length ? <Text style={{ color: c.textSub, marginTop: space.md }}>검색 결과가 없어요. 근처 건물·가게 이름으로 찾아보세요.</Text> : null}
