@@ -18,6 +18,7 @@ import { Card, Chip, MockBadge } from '@/components/ui';
 import { dataSource, type ComplexCandidate } from '@/data';
 import { MOCK_AS_OF } from '@/data/mock/complexes';
 import { ExternalLinkReceive } from '@/features/share/ExternalLinkReceive';
+import { usePlaces, type Place } from '@/features/places/KakaoServices';
 import { fetchLinkPreview } from '@/features/share/link-preview';
 import { sourceOf, useListings } from '@/stores/listings';
 import { radius, space, usePalette } from '@/theme/colors';
@@ -52,6 +53,33 @@ function ListingReceive({ shared }: { shared: string }) {
   const [previewTitle, setPreviewTitle] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<ComplexCandidate[]>([]);
   const [chosen, setChosen] = useState<ComplexCandidate | null>(null);
+  const places = usePlaces();
+  const [kakaoPlaces, setKakaoPlaces] = useState<Place[]>([]);
+
+  /** 카카오 지도에서 찾기: 주소면 주소 검색, 아니면 장소(아파트) 검색. 결과 좌표 근처 단지를 후보로 */
+  const lookup = async (opts: { name?: string | null; address?: string | null; dong?: string | null }) => {
+    let near: { lat: number; lng: number } | null = null;
+    let found: Place[] = [];
+    if (places.available) {
+      try {
+        if (opts.address) {
+          const r = await places.search({ kind: 'address', query: opts.address });
+          if (r.places[0]) near = { lat: r.places[0].lat, lng: r.places[0].lng };
+        }
+        const q = opts.name ?? (opts.address ? null : opts.dong);
+        if (q) {
+          const r = await places.search({ kind: 'keyword', query: /울산/.test(q) ? q : `울산 ${q}` }, { size: 8 });
+          // 아파트·주거 시설만 (가게 등 제외)
+          found = r.places.filter((x) => /아파트|주거|오피스텔|빌라|주택/.test(x.category));
+          if (!near && found[0] && opts.name) near = { lat: found[0].lat, lng: found[0].lng };
+        }
+      } catch {
+        /* 카카오 검색 실패해도 우리 데이터로 계속 */
+      }
+    }
+    setKakaoPlaces(found.slice(0, 5));
+    return dataSource.findCandidates({ name: opts.name ?? null, address: opts.address ?? null, dong: opts.dong ?? null, near });
+  };
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
 
@@ -70,8 +98,10 @@ function ListingReceive({ shared }: { shared: string }) {
       let p = parseSharedText(shared);
       if (p.url && (!p.complexName || !p.address || p.price == null)) {
         const og = await fetchLinkPreview(p.url);
-        if (og && (og.title || og.description)) {
+        if (og && (og.title || og.description || og.address || og.complexName)) {
           p = mergeParsed(p, parseSharedText(`${og.title ?? ''}\n${og.description ?? ''}`));
+          // 페이지 본문에 적힌 주소·단지명
+          p = { ...p, address: p.address ?? og.address, complexName: p.complexName ?? og.complexName };
           if (alive) {
             setUsedPreview(true);
             setPreviewTitle(og.title);
@@ -88,7 +118,7 @@ function ListingReceive({ shared }: { shared: string }) {
       setQuery(p.complexName ?? p.dongName ?? '');
       setStep('finding');
       try {
-        const list = p.complexName || p.address || p.dongName ? await dataSource.findCandidates({ name: p.complexName, address: p.address, dong: p.dongName }) : [];
+        const list = p.complexName || p.address || p.dongName ? await lookup({ name: p.complexName, address: p.address, dong: p.dongName }) : [];
         if (alive) setCandidates(list);
       } catch {
         if (alive) setCandidates([]);
@@ -104,13 +134,14 @@ function ListingReceive({ shared }: { shared: string }) {
     if (!query.trim()) return;
     setSearching(true);
     try {
-      setCandidates(await dataSource.findCandidates({ name: query.trim(), dong: null, address: null }));
+      setCandidates(await lookup({ name: query.trim() }));
     } finally {
       setSearching(false);
     }
   };
 
-  const trades = useQuery({ queryKey: ['trades', chosen?.id], queryFn: () => dataSource.getTrades(chosen!.id), enabled: !!chosen });
+  const isKakaoOnly = !!chosen?.id.startsWith('kakao:');
+  const trades = useQuery({ queryKey: ['trades', chosen?.id], queryFn: () => dataSource.getTrades(chosen!.id), enabled: !!chosen && !isKakaoOnly });
   const price = Number(priceText.replace(/[^\d]/g, '')) || null;
   const area = Number(areaText) || null;
   const today = dataSource.mode === 'mock' ? MOCK_AS_OF : new Date().toISOString().slice(0, 10);
@@ -121,7 +152,7 @@ function ListingReceive({ shared }: { shared: string }) {
 
   const save = () => {
     const item = addListing({
-      complexId: chosen?.id ?? null,
+      complexId: chosen && !isKakaoOnly ? chosen.id : null,
       complexName: chosen?.name ?? parsed.complexName,
       source: sourceOf(parsed.url),
       url: parsed.url,
@@ -134,7 +165,7 @@ function ListingReceive({ shared }: { shared: string }) {
       memo,
       parseStatus: usedPreview ? 'preview' : 'text',
     });
-    if (chosen) router.replace(`/complex/${chosen.id}?savedListing=${item.id}`);
+    if (chosen && !isKakaoOnly) router.replace(`/complex/${chosen.id}?savedListing=${item.id}`);
     else router.replace('/my-listings');
   };
 
@@ -178,7 +209,7 @@ function ListingReceive({ shared }: { shared: string }) {
               <TextInput
                 value={query}
                 onChangeText={setQuery}
-                placeholder="단지명이나 동 이름으로 찾기"
+                placeholder="단지명·주소로 찾기 (예: 협성 휴포레)"
                 placeholderTextColor={c.textSub}
                 style={{ flex: 1, color: c.text, fontSize: 16, paddingVertical: 10 }}
                 returnKeyType="search"
@@ -188,8 +219,37 @@ function ListingReceive({ shared }: { shared: string }) {
                 {searching ? <ActivityIndicator color={c.primary} /> : <Ionicons name="search" size={20} color={c.primary} />}
               </Pressable>
             </View>
+            {kakaoPlaces.length ? (
+              <View style={{ marginBottom: space.sm }}>
+                <Text style={{ color: c.textSub, fontSize: 13, marginTop: space.sm }}>카카오 지도에서 찾은 곳</Text>
+                {kakaoPlaces.map((p) => {
+                  const id = `kakao:${p.id}`;
+                  const on = chosen?.id === id;
+                  return (
+                    <Pressable
+                      key={id}
+                      onPress={() => {
+                        // 우리 데이터에 그 위치(200m 안) 단지가 있으면 그 단지로
+                        const near = candidates.find((cd) => cd.location && Math.hypot((cd.location.lat - p.lat) * 111000, (cd.location.lng - p.lng) * 90000) < 200);
+                        setChosen(near ?? { id, name: p.name, subtitle: p.address, location: { lat: p.lat, lng: p.lng }, distanceM: null, score: 0 });
+                        setStep('save');
+                      }}
+                      style={[styles.cand, { borderColor: on ? c.primary : c.border, backgroundColor: on ? c.chip : 'transparent' }]}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: on }}>
+                      <Ionicons name="location" size={20} color={c.primary} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: c.text, fontSize: 16, fontWeight: '700' }}>{p.name}</Text>
+                        <Text style={{ color: c.textSub, fontSize: 13 }}>{p.address}</Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+                <Text style={{ color: c.textSub, fontSize: 13, marginTop: space.md }}>앱의 단지 목록</Text>
+              </View>
+            ) : null}
             {candidates.length === 0 ? (
-              <Text style={{ color: c.textSub, marginTop: space.sm }}>후보가 없어요. 단지명을 바꿔 검색해 보세요.</Text>
+              <Text style={{ color: c.textSub, marginTop: space.sm }}>후보가 없어요. 단지명이나 주소를 바꿔 검색해 보세요.</Text>
             ) : (
               candidates.map((cd, i) => {
                 const on = chosen?.id === cd.id;
@@ -263,7 +323,7 @@ function ListingReceive({ shared }: { shared: string }) {
         <View style={[styles.bottom, { backgroundColor: c.card, borderTopColor: c.border, paddingBottom: insets.bottom + space.sm }]}>
           <Pressable onPress={save} style={[styles.btn, { backgroundColor: c.primary }]} accessibilityRole="button">
             <Text style={{ color: c.primaryText, fontWeight: '800', fontSize: 16 }}>
-              {chosen ? `${chosen.name}에 저장하고 상세 보기` : '단지 없이 매물함에 저장'}
+              {chosen && !isKakaoOnly ? `${chosen.name}에 저장하고 상세 보기` : chosen ? `${chosen.name}(으)로 매물함에 저장` : '단지 없이 매물함에 저장'}
             </Text>
           </Pressable>
         </View>

@@ -32,7 +32,12 @@ const BRANDS = [
   '래미안', '편한세상', '롯데캐슬', '센트럴', '더샵', '해링턴', '스위첸', '위브', 'SK뷰', '하늘채', '한신휴', '에일린의뜰',
   '풍경채', '베르디움', '유보라', '하우스디', '리슈빌', '메르디앙', '코아루', '골드클래스', '로얄듀크', '서희스타힐스', '엠코타운',
   '두산위브', '꿈에그린', '어울림', '데시앙', '이편한세상', '우방', '현대', '주공', '한라', '삼성', '쌍용', '대림', '경남', '극동', '신천지',
+  // 울산에 많은 브랜드
+  '휴포레', '협성', '인벤스', '예가', '루첸', '아이유쉘', '로얄듀크', '비발디', '해모로', '스타힐스', '블루밍', '홈타운', '스위트',
+  '리슈빌', '베르디움', '센텀', '휴먼시아', '노블리스', '엠코타운', '아이파크', '시티', '빌리지', '하이빌', '그린타운', '코오롱',
 ];
+/** 단지 이름이 아닌 말 (면적·층·거래 표현만 있는 경우 버림) */
+const NOT_NAME = /^(?:[가-힣]{1,4}(?:동|읍|면|리)\s*)?(?:\d+(?:\.\d+)?\s*(?:평|㎡|m²|층|억|만)\s*)*(?:아파트|APT|빌라|오피스텔|주택|매물)?$/i;
 
 /** "3억 2,000만", "3억2천", "32,000만원", "3.2억", "8500만" → 만원 */
 export function parseKoreanPrice(s: string): number | null {
@@ -88,7 +93,7 @@ function findFloor(text: string): number | null {
 function findAddress(text: string): string | null {
   const road = text.match(new RegExp(`(?:울산(?:광역시)?\\s*)?${SIGUNGU}\\s*[가-힣0-9]+(?:로|길)\\s*\\d+(?:-\\d+)?`));
   if (road) return road[0].trim();
-  const jibun = text.match(new RegExp(`(?:울산(?:광역시)?\\s*)?(?:${SIGUNGU}\\s*)?(?:[가-힣]+(?:읍|면)\\s*)?[가-힣0-9]+(?:동|리|가)\\s*(?:산\\s*)?\\d+(?:-\\d+)?(?!\\s*(?:층|평|㎡|만|억|동))`));
+  const jibun = text.match(new RegExp(`(?:울산(?:광역시)?\\s*)?(?:${SIGUNGU}\\s*)?(?:[가-힣]+(?:읍|면)\\s*)?[가-힣0-9]+(?:동|리|가)\\s*(?:산\\s*)?\\d+(?:-\\d+)?(?![\\d.-])(?!\\s*(?:층|평|㎡|m|만|억|동|세대|년))`));
   if (jibun && /\d/.test(jibun[0])) return jibun[0].trim();
   return null;
 }
@@ -104,14 +109,17 @@ function findComplexName(text: string): string | null {
   const brand = BRANDS.map((b) => b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
   // 브랜드 앞 한 단어(예: "옥동 학마을 아파트"의 "옥동")까지 포함하되, 거래 용어는 제외
   const re = new RegExp(`((?:[가-힣A-Za-z0-9]{1,10}\\s)?[가-힣A-Za-z0-9]{1,12}\\s?(?:${brand})[가-힣A-Za-z0-9]{0,8}(?:\\s?\\d+차)?)`, 'i');
-  const m = text.replace(/\[[^\]]*\]/g, ' ').match(re);
-  if (!m) return null;
-  return (
-    m[1]
-      .replace(/^(매매|전세|월세|급매|급전세|매도|팝니다|부동산)\s/, '')
+  const cleaned = text.replace(/\[[^\]]*\]/g, ' ');
+  // 여러 후보 중 면적·층 같은 말이 아닌 첫 번째
+  for (const m of cleaned.matchAll(new RegExp(re.source, 'gi'))) {
+    const name = m[1]
+      .replace(/^(매매|전세|월세|급매|급전세|매도|팝니다|부동산|단지|단지명|아파트명|건물명?|위치|매물)\s/, '')
       .replace(/(매매|전세|월세|급매|팝니다|합니다)$/, '')
-      .trim() || null
-  );
+      .replace(/^\d+(?:\.\d+)?\s*(?:평|㎡|층)\s*/, '')
+      .trim();
+    if (name && !NOT_NAME.test(name)) return name;
+  }
+  return null;
 }
 
 export function parseSharedText(raw: string): ParsedShare {
@@ -170,4 +178,34 @@ export function isOgAllowed(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * 공유한 매물 페이지 한 장에서 주소·단지명 후보만 뽑는다 (페이지는 저장하지 않음).
+ * OG 태그 → 구조화 데이터(JSON-LD) → 본문 글자 순서로 찾는다.
+ */
+export function extractListingFromHtml(html: string): { title: string | null; description: string | null; image: string | null; address: string | null; complexName: string | null } {
+  const og = extractOgTags(html);
+  const ld: string[] = [];
+  for (const m of html.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)) ld.push(m[1]);
+  // 태그를 지운 본문 (스크립트·스타일 제외)
+  const body = html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .slice(0, 60_000);
+  // JSON 안의 문자열 값들 (주소 필드가 있을 수 있음)
+  const jsonText = [...ld, ...[...html.matchAll(/"(?:address|addressName|streetAddress|roadAddress|jibunAddress|fullAddress|buildingName|complexName|apartmentName|name)"\s*:\s*"([^"]{2,80})"/g)].map((m) => m[1])].join(' ');
+  const texts = [og.title ?? '', og.description ?? '', jsonText, body];
+  let address: string | null = null;
+  let complexName: string | null = null;
+  for (const t of texts) {
+    const p = parseSharedText(t);
+    address = address ?? p.address;
+    complexName = complexName ?? p.complexName;
+    if (address && complexName) break;
+  }
+  return { ...og, address, complexName };
 }

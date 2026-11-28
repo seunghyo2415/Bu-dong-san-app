@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { extractOgTags, isOgAllowed, mergeParsed, parseKoreanPrice, parseSharedText } from './share-parse';
+import { extractListingFromHtml, extractOgTags, isOgAllowed, mergeParsed, parseKoreanPrice, parseSharedText } from './share-parse';
 
 describe('한글 가격', () => {
   it.each([
@@ -83,5 +83,26 @@ describe('링크 미리보기', () => {
     expect(m.url).toBe('https://daangn.com/x');
     expect(m.price).toBe(40000);
     expect(m.areaM2).toBe(59);
+  });
+});
+
+describe('당근 매물 제목에 단지명이 없을 때', () => {
+  it('"신정동 16평 아파트"는 단지 이름이 아님', () => {
+    const p = parseSharedText('신정동 16평 아파트 매매 2억 https://www.daangn.com/kr/realty/x');
+    expect(p.complexName).toBeNull();
+    expect(p.dongName).toBe('신정동');
+  });
+  it('울산 브랜드 인식 (협성 휴포레)', () => {
+    expect(parseSharedText('신정 협성 휴포레 매매').complexName).toBe('신정 협성 휴포레');
+    expect(parseSharedText('신정협성휴포레 16평').complexName).toBe('신정협성휴포레');
+  });
+  it('페이지 본문·구조화 데이터에서 주소와 단지명 (예시 HTML)', () => {
+    const html = `<html><head><meta property="og:title" content="신정동 16평 아파트"><meta property="og:description" content="매매 2억">
+      <script type="application/ld+json">{"@type":"Residence","address":{"streetAddress":"울산 남구 신정로 123"}}</script></head>
+      <body><h1>신정동 16평 아파트</h1><div>단지 신정협성휴포레 · 5층</div><script>var x = 1</script></body></html>`;
+    const r = extractListingFromHtml(html);
+    expect(r.title).toBe('신정동 16평 아파트');
+    expect(r.address).toBe('울산 남구 신정로 123');
+    expect(r.complexName).toBe('신정협성휴포레');
   });
 });

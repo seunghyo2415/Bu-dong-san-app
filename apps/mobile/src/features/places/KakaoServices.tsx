@@ -19,7 +19,7 @@ export type Place = {
   url: string;
 };
 
-type Req = { kind: 'keyword'; query: string } | { kind: 'category'; code: string };
+type Req = { kind: 'keyword'; query: string } | { kind: 'category'; code: string } | { kind: 'address'; query: string };
 type Opts = { near?: LatLng; radius?: number; size?: number; sort?: 'distance' | 'accuracy' };
 export type PlacesResult = { places: Place[]; total: number };
 

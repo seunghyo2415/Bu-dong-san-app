@@ -144,25 +144,30 @@ export const mockDataSource: DataSource = {
     return [...dongs, ...complexes].slice(0, 20);
   },
 
-  async findCandidates({ name, address, dong }) {
+  async findCandidates({ name, address, dong, near }) {
     await delay(200);
+    // 좌표가 있으면 가까운 단지 우선 (1km 안)
+    const distOf = (c: { location: { lat: number; lng: number } | null }) =>
+      near && c.location ? Math.hypot((c.location.lat - near.lat) * 111000, (c.location.lng - near.lng) * 90000) : null;
     const n = norm(name ?? '');
     const d = dong ?? MOCK_DONGS.find((x) => (address ?? '').includes(x.dongName))?.dongName ?? null;
     return MOCK_COMPLEXES.map((c) => {
       const cn = norm(c.name);
       const nameScore = n ? dice(cn, n) + (cn.includes(n) || n.includes(cn) ? 0.3 : 0) : 0;
       const dongScore = d && c.dongName === d ? 0.3 : 0;
-      return { c, score: nameScore + dongScore };
+      const m = distOf(c);
+      const nearScore = m != null && m < 1000 ? 1 - m / 1000 : 0;
+      return { c, score: nameScore + dongScore + nearScore, m };
     })
       .filter((x) => x.score >= 0.25)
       .sort((a, b) => b.score - a.score)
       .slice(0, 8)
-      .map(({ c, score }) => ({
+      .map(({ c, score, m }) => ({
         id: c.id,
         name: c.name,
-        subtitle: `${c.dongName} · ${c.households.toLocaleString()}세대`,
+        subtitle: `${c.dongName} · ${c.households.toLocaleString()}세대${m != null && m < 1000 ? ` · ${Math.round(m)}m` : ''}`,
         location: c.location,
-        distanceM: null,
+        distanceM: m != null ? Math.round(m) : null,
         score: Math.round(score * 100) / 100,
       }));
   },

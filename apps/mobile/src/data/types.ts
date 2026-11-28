@@ -142,7 +142,7 @@ export type ComplexCandidate = {
   score: number;
 };
 
-export type CandidateQuery = { name?: string | null; address?: string | null; dong?: string | null };
+export type CandidateQuery = { name?: string | null; address?: string | null; dong?: string | null; near?: LatLng | null };
 
 export type PostCategory = 'review' | 'pros_cons' | 'question';
 export type BoardPost = {

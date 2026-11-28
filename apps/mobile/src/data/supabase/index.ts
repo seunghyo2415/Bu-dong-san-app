@@ -40,9 +40,9 @@ export const supabaseDataSource: DataSource = {
   getTrades: (id) => rpc<Trade[]>('complex_trades', { p_id: id }),
   search: (q) => rpc<SearchResult[]>('search_all', { q }),
   getRegionSummaries: () => rpc<RegionSummary[]>('region_summaries'),
-  async findCandidates({ name, address, dong }) {
-    let at: LatLng | null = null;
-    if (address) at = await geocode(address);
+  async findCandidates({ name, address, dong, near }) {
+    let at: LatLng | null = near ?? null;
+    if (!at && address) at = await geocode(address);
     if (!at && name) at = (await searchPlaces(`울산 ${name}`))[0]?.location ?? null;
     return rpc<ComplexCandidate[]>('find_complex_candidates', { q: name ?? null, lat: at?.lat ?? null, lng: at?.lng ?? null, dong: dong ?? null });
   },
