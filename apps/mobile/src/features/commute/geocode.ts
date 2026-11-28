@@ -28,6 +28,8 @@ export async function geocodeStops(
   existing: Record<string, StopGeo>,
   search: Search,
   onStop: (name: string, geo: StopGeo, done: number, total: number) => void,
+  /** 카카오에서 못 찾을 때 추가로 쓰는 검색 (네이버 지역 검색) */
+  fallback?: (query: string) => Promise<Place[]>,
 ) {
   const names = new Set(routes.flatMap((r) => r.stops).filter((s) => s !== COMPANY_WORD && !isWaypoint(s)));
   const total = names.size;
@@ -74,6 +76,13 @@ export async function geocodeStops(
         if (p) return p;
       } catch {
         /* 다음 */
+      }
+    }
+    // 카카오에 없으면 네이버 지역 검색으로 한 번 더
+    if (fallback) {
+      for (const q of qs.slice(0, 3)) {
+        const p = plausible(await fallback(`${outside ?? '울산'} ${q}`), near, near ? limit * 2 : Infinity);
+        if (p) return p;
       }
     }
     return null;

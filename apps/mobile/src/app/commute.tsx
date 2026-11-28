@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card, Row, KeyboardSheet } from '@/components/ui';
 import { geocodeStops } from '@/features/commute/geocode';
 import { usePlaces, type Place } from '@/features/places/KakaoServices';
+import { naverSearch } from '@/features/places/naver';
 import { useAppStore } from '@/stores/app-store';
 import { COMPANY_WORD, useCommute, type StopGeo } from '@/stores/commute';
 import { radius, space, usePalette } from '@/theme/colors';
@@ -89,10 +90,16 @@ export default function CommuteScreen() {
         const r = await places.search({ kind: 'keyword', query: company.name }, { size: 1 });
         if (r.places[0]) setCompany({ name: company.name, location: { lat: r.places[0].lat, lng: r.places[0].lng } });
       }
-      await geocodeStops(routes, useCommute.getState().stops, places.search, (name, geo, done, total) => {
-        setStop(name, geo);
-        setProgress({ done, total });
-      });
+      await geocodeStops(
+        routes,
+        useCommute.getState().stops,
+        places.search,
+        (name, geo, done, total) => {
+          setStop(name, geo);
+          setProgress({ done, total });
+        },
+        naverSearch,
+      );
     } finally {
       setBusy(null);
     }
@@ -210,12 +217,14 @@ function FixStopModal({ name, onClose }: { name: string | null; onClose: () => v
   const [loading, setLoading] = useState(false);
 
   const run = async (query: string) => {
-    if (!query.trim() || !places.available) return;
+    if (!query.trim()) return;
     setLoading(true);
     try {
       const t = query.trim();
-      const r = await places.search({ kind: 'keyword', query: /울산|부산|경주|양산|기장|정관|웅상|포항/.test(t) ? t : `울산 ${t}` }, { size: 10 });
-      setResults(r.places);
+      const full = /울산|부산|경주|양산|기장|정관|웅상|포항/.test(t) ? t : `울산 ${t}`;
+      // 카카오 + 네이버 결과를 함께 (네이버에만 있는 작은 가게·정류장 이름 보충)
+      const [k, n] = await Promise.all([places.search({ kind: 'keyword', query: full }, { size: 10 }).then((r) => r.places).catch(() => []), naverSearch(full)]);
+      setResults([...k, ...n.filter((x) => !k.some((y) => y.name === x.name))]);
     } catch {
       setResults([]);
     } finally {

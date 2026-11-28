@@ -19,6 +19,7 @@ import { dataSource, type ComplexCandidate } from '@/data';
 import { MOCK_AS_OF } from '@/data/mock/complexes';
 import { ExternalLinkReceive } from '@/features/share/ExternalLinkReceive';
 import { usePlaces, type Place } from '@/features/places/KakaoServices';
+import { naverSearch } from '@/features/places/naver';
 import { fetchLinkPreview } from '@/features/share/link-preview';
 import { sourceOf, useListings } from '@/stores/listings';
 import { radius, space, usePalette } from '@/theme/colors';
@@ -71,6 +72,7 @@ function ListingReceive({ shared }: { shared: string }) {
           const r = await places.search({ kind: 'keyword', query: /울산/.test(q) ? q : `울산 ${q}` }, { size: 8 });
           // 아파트·주거 시설만 (가게 등 제외)
           found = r.places.filter((x) => /아파트|주거|오피스텔|빌라|주택/.test(x.category));
+          if (!found.length) found = (await naverSearch(/울산/.test(q) ? q : `울산 ${q}`)).filter((x) => /아파트|주거|오피스텔|빌라|주택/.test(x.category));
           if (!near && found[0] && opts.name) near = { lat: found[0].lat, lng: found[0].lng };
         }
       } catch {
@@ -221,7 +223,7 @@ function ListingReceive({ shared }: { shared: string }) {
             </View>
             {kakaoPlaces.length ? (
               <View style={{ marginBottom: space.sm }}>
-                <Text style={{ color: c.textSub, fontSize: 13, marginTop: space.sm }}>카카오 지도에서 찾은 곳</Text>
+                <Text style={{ color: c.textSub, fontSize: 13, marginTop: space.sm }}>지도에서 찾은 곳</Text>
                 {kakaoPlaces.map((p) => {
                   const id = `kakao:${p.id}`;
                   const on = chosen?.id === id;

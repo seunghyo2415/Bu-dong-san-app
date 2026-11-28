@@ -1,9 +1,11 @@
 /**
  * 앱용 주소·장소 검색 (카카오 로컬 API 대행). 카카오 REST 키는 서버에만 있다.
- * body: { action: 'geocode', query } | { action: 'keyword', query, lat?, lng? } | { action: 'reverse', lat, lng }
+ * body: { action: 'geocode', query } | { action: 'keyword', query, lat?, lng? } | { action: 'reverse', lat, lng } | { action: 'naver', query }
+ * naver: 네이버 지역 검색(공식 검색 API) — 카카오에 없는 작은 가게·정류장 이름 보충. 키는 서버 비밀값 NAVER_CLIENT_ID/SECRET
  * 앱은 supabase.functions.invoke('geo', ...) 로 호출 (anon 키 필요)
  */
 import { KakaoClient } from '../_shared/kakao.ts';
+import { naverLocal } from '../_shared/naver.ts';
 
 const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' };
 
@@ -11,11 +13,17 @@ type Place = { place_name?: string; address_name?: string; road_address_name?: s
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
-  const key = Deno.env.get('KAKAO_REST_KEY');
-  if (!key) return Response.json({ error: 'KAKAO_REST_KEY 미설정' }, { status: 500, headers: cors });
-  const kakao = new KakaoClient(key);
   try {
     const b = await req.json();
+    if (b.action === 'naver' && typeof b.query === 'string') {
+      const id = Deno.env.get('NAVER_CLIENT_ID');
+      const secret = Deno.env.get('NAVER_CLIENT_SECRET');
+      if (!id || !secret) return Response.json({ error: '네이버 검색 키 미설정' }, { status: 500, headers: cors });
+      return Response.json({ places: await naverLocal(b.query.slice(0, 100), id, secret) }, { headers: cors });
+    }
+    const key = Deno.env.get('KAKAO_REST_KEY');
+    if (!key) return Response.json({ error: 'KAKAO_REST_KEY 미설정' }, { status: 500, headers: cors });
+    const kakao = new KakaoClient(key);
     if (b.action === 'geocode' && typeof b.query === 'string') {
       return Response.json({ result: await kakao.geocode(b.query.slice(0, 100)) }, { headers: cors });
     }
