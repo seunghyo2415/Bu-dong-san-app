@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { CSV_TEMPLATE, listSheets, parseRouteCsv, parseRouteTable, readXlsx, uniqueStops, type CommuteRoute } from '@ulsan/shared';
+import { CSV_TEMPLATE, listSheets, parseRouteCsv, parseRouteTable, parseStopLocationCsv, readXlsx, uniqueStops, type CommuteRoute } from '@ulsan/shared';
 import * as Clipboard from 'expo-clipboard';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
@@ -8,11 +8,11 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Card, Row } from '@/components/ui';
+import { Card, Row, KeyboardSheet } from '@/components/ui';
 import { geocodeStops } from '@/features/commute/geocode';
 import { usePlaces, type Place } from '@/features/places/KakaoServices';
 import { useAppStore } from '@/stores/app-store';
-import { COMPANY_WORD, useCommute } from '@/stores/commute';
+import { COMPANY_WORD, useCommute, type StopGeo } from '@/stores/commute';
 import { radius, space, usePalette } from '@/theme/colors';
 
 async function readRoutes(asset: DocumentPicker.DocumentPickerAsset): Promise<CommuteRoute[]> {
@@ -29,7 +29,7 @@ export default function CommuteScreen() {
   const c = usePalette();
   const insets = useSafeAreaInsets();
   const places = usePlaces();
-  const { routes, stops, fileName, importedAt, company, setImport, setStop, setCompany, clear } = useCommute();
+  const { routes, stops, fileName, importedAt, company, setImport, setStop, setStops, setCompany, clear } = useCommute();
   const focusMap = useAppStore((s) => s.focusMap);
   const [busy, setBusy] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
@@ -47,6 +47,24 @@ export default function CommuteScreen() {
     if (res.canceled || !res.assets?.[0]) return;
     setBusy('파일을 읽는 중…');
     try {
+      // 정류장 위치 보정 파일(정류장명,위도,경도…)이면 위치만 적용
+      if (/\.csv$/i.test(res.assets[0].name) || res.assets[0].mimeType?.includes('csv')) {
+        const locs = parseStopLocationCsv(await new File(res.assets[0].uri).text());
+        if (locs.length) {
+          if (!routes.length) {
+            Alert.alert('노선표를 먼저 불러와 주세요', '위치 보정 파일은 노선표(엑셀)를 불러온 뒤에 넣어요.');
+            return;
+          }
+          const names = new Set(uniqueStops(routes, COMPANY_WORD));
+          const patch: Record<string, StopGeo> = {};
+          for (const l of locs) {
+            if (names.has(l.name)) patch[l.name] = { location: { lat: l.lat, lng: l.lng }, status: l.estimated ? 'estimated' : 'manual', placeName: l.place || (l.estimated ? '추정 위치' : undefined) };
+          }
+          setStops(patch);
+          Alert.alert('위치를 넣었어요', `정류장 ${Object.keys(patch).length}곳 위치를 적용했어요.${locs.length > Object.keys(patch).length ? ` (노선표에 없는 이름 ${locs.length - Object.keys(patch).length}곳은 건너뜀)` : ''}`);
+          return;
+        }
+      }
       const parsed = await readRoutes(res.assets[0]);
       if (!parsed.length) {
         Alert.alert('노선을 찾지 못했어요', '표에 "운행노선" 머리글이 있는 엑셀이거나, 아래 CSV 양식이어야 해요.');
@@ -89,6 +107,7 @@ export default function CommuteScreen() {
             회사 통근버스 노선표(엑셀 .xlsx 또는 CSV)를 고르면 정류장을 지도에 표시하고, 단지에서 가장 가까운 정류장과 도보 시간을 알려드려요.
           </Text>
           <Text style={{ color: c.good, fontSize: 13, marginTop: 6 }}>🔒 파일 내용은 이 폰에만 저장되고 서버로 보내지 않아요.</Text>
+          <Text style={{ color: c.textSub, fontSize: 13, marginTop: 4 }}>정류장 위치 보정 파일(CSV: 정류장명,위도,경도)도 같은 버튼으로 넣을 수 있어요.</Text>
           <Pressable onPress={pick} style={[styles.btn, { backgroundColor: c.primary }]} accessibilityRole="button" disabled={!!busy}>
             <Ionicons name="document-attach" size={18} color={c.primaryText} />
             <Text style={{ color: c.primaryText, fontWeight: '800', fontSize: 16 }}>{routes.length ? '다른 파일로 바꾸기' : '파일 선택'}</Text>
@@ -152,15 +171,15 @@ export default function CommuteScreen() {
               return (
                 <Pressable key={s} onPress={() => setFixing(s)} style={[styles.stop, { borderTopColor: c.border }]}>
                   <Ionicons
-                    name={g?.status === 'notfound' ? 'alert-circle' : g?.location ? 'location' : 'ellipse-outline'}
+                    name={g?.status === 'notfound' ? 'alert-circle' : g?.status === 'estimated' ? 'help-circle' : g?.location ? 'location' : 'ellipse-outline'}
                     size={18}
-                    color={g?.status === 'notfound' ? c.bad : g?.location ? c.good : c.textSub}
+                    color={g?.status === 'notfound' ? c.bad : g?.status === 'estimated' ? c.warn : g?.location ? c.good : c.textSub}
                   />
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: c.text, fontSize: 15 }}>{s}</Text>
                     {g?.placeName ? (
                       <Text style={{ color: c.textSub, fontSize: 12 }}>
-                        → {g.placeName} {g.status === 'manual' ? '(직접 지정)' : ''}
+                        → {g.placeName} {g.status === 'manual' ? '(직접 지정)' : g.status === 'estimated' ? '(앞뒤 정류장으로 추정)' : ''}
                       </Text>
                     ) : null}
                   </View>
@@ -194,7 +213,8 @@ function FixStopModal({ name, onClose }: { name: string | null; onClose: () => v
     if (!query.trim() || !places.available) return;
     setLoading(true);
     try {
-      const r = await places.search({ kind: 'keyword', query: `울산 ${query.trim()}` }, { size: 10 });
+      const t = query.trim();
+      const r = await places.search({ kind: 'keyword', query: /울산|부산|경주|양산|기장|정관|웅상|포항/.test(t) ? t : `울산 ${t}` }, { size: 10 });
       setResults(r.places);
     } catch {
       setResults([]);
@@ -205,7 +225,7 @@ function FixStopModal({ name, onClose }: { name: string | null; onClose: () => v
 
   return (
     <Modal visible={!!name} animationType="slide" transparent onRequestClose={onClose} onShow={() => { setQ(name ?? ''); setResults([]); run(name ?? ''); }}>
-      <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' }} onPress={onClose} />
+      <KeyboardSheet onClose={onClose}>
       <View style={{ backgroundColor: c.card, padding: space.lg, paddingBottom: insets.bottom + space.lg, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, maxHeight: '75%' }}>
         <Text style={{ color: c.text, fontSize: 17, fontWeight: '800' }}>「{name}」 위치 고르기</Text>
         <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.md }}>
@@ -232,6 +252,7 @@ function FixStopModal({ name, onClose }: { name: string | null; onClose: () => v
           {!loading && !results.length ? <Text style={{ color: c.textSub, marginTop: space.md }}>검색 결과가 없어요. 근처 건물·가게 이름으로 찾아보세요.</Text> : null}
         </ScrollView>
       </View>
+      </KeyboardSheet>
     </Modal>
   );
 }

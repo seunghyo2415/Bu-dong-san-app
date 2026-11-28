@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { ComplexDetail } from '@/data';
 import { useAppStore } from '@/stores/app-store';
+import { KeyboardSheet } from '@/components/ui';
 import { radius, space, usePalette } from '@/theme/colors';
 
 /**
@@ -68,7 +69,7 @@ function LinkGuide({ d, app, onClose }: { d: ComplexDetail; app: ExternalApp | n
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' }} onPress={onClose} />
+      <KeyboardSheet onClose={onClose}>
       <View style={{ backgroundColor: c.card, padding: space.lg, paddingBottom: insets.bottom + space.lg, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, gap: space.md }}>
         <Text style={{ color: c.text, fontSize: 18, fontWeight: '800' }}>{label}에서 바로 열기</Text>
         <Text style={{ color: c.text, fontSize: 15, lineHeight: 23 }}>
@@ -95,6 +96,7 @@ function LinkGuide({ d, app, onClose }: { d: ComplexDetail; app: ExternalApp | n
           </Pressable>
         ) : null}
       </View>
+      </KeyboardSheet>
     </Modal>
   );
 }

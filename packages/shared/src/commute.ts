@@ -110,9 +110,77 @@ export function parseRouteCsv(csv: string): CommuteRoute[] {
 
 export const CSV_TEMPLATE = '노선명,순번,정류장명,1조 출발시간,2조 출발시간\n무거,1,문수중학교 입구,05:25,14:10\n무거,2,삼호교입구,,\n무거,3,회사,,\n';
 
-/** 모든 정류장 이름 (중복 제거, '회사' 제외) */
+/** "(7번국도)"처럼 괄호로만 된 건 정류장이 아니라 지나가는 길 */
+export function isWaypoint(stop: string): boolean {
+  return /^\(.*\)$/.test(stop.trim());
+}
+
+/** 모든 정류장 이름 (중복 제거, '회사'·경유 도로 제외) */
 export function uniqueStops(routes: CommuteRoute[], companyWord = '회사'): string[] {
-  return [...new Set(routes.flatMap((r) => r.stops).filter((s) => s !== companyWord))];
+  return [...new Set(routes.flatMap((r) => r.stops).filter((s) => s !== companyWord && !isWaypoint(s)))];
+}
+
+/**
+ * 지도 검색용 검색어 후보: 원래 이름 → 흔한 오타 교정 → "앞·입구·정류장·맞은편" 같은 꼬리말 제거 → 괄호 안 이름.
+ * 예) "남운프라자 버스정류장(무거 위브자이)" → [..., "남운프라자", "무거 위브자이"]
+ */
+const TYPO: [RegExp, string][] = [
+  [/케슬/g, '캐슬'],
+  [/흴스/g, '힐스'],
+  [/은헹/g, '은행'],
+  [/펜트리움/g, '펜테리움'],
+  [/아파$/, '아파트'],
+];
+const TAIL = /\s*(버스\s*정류장|정류장|승강장|맞은편|건너편|입구|정문|후문|앞|사이|간판|육교|쪽)$/;
+export function stopSearchQueries(stop: string): string[] {
+  const noParen = stop.replace(/\([^)]*\)/g, '').trim();
+  const inParen = [...stop.matchAll(/\(([^)]*)\)/g)].map((m) => m[1].trim()).filter((x) => x && !/^\d|부$|경유|출발/.test(x));
+  const out: string[] = [];
+  const add = (q: string) => {
+    const t = q.replace(/\s+/g, ' ').trim();
+    if (t.length >= 2 && !out.includes(t)) out.push(t);
+  };
+  for (const q of [stop, noParen, ...inParen]) {
+    add(q);
+    let t = q;
+    for (const [a, b] of TYPO) t = t.replace(a, b);
+    add(t);
+    let u = t;
+    for (let i = 0; i < 3; i++) {
+      const v = u.replace(TAIL, '').trim();
+      if (v === u) break;
+      u = v;
+    }
+    add(u);
+    add(u.replace(/\d+,?\d*차\s*사이/, ''));
+  }
+  return out;
+}
+
+/** 위치 보정 파일(CSV: 정류장명,위도,경도[,찾은 장소,상태]) 읽기 */
+export function parseStopLocationCsv(csv: string): { name: string; lat: number; lng: number; place: string; estimated: boolean }[] {
+  const rows = csv.replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.trim());
+  if (!rows.length || !/위도/.test(rows[0])) return [];
+  const out: { name: string; lat: number; lng: number; place: string; estimated: boolean }[] = [];
+  for (const line of rows.slice(1)) {
+    // 정류장 이름에 쉼표가 있을 수 있어 따옴표 처리
+    const cells: string[] = [];
+    let cur = '';
+    let q = false;
+    for (const ch of line) {
+      if (ch === '"') q = !q;
+      else if (ch === ',' && !q) {
+        cells.push(cur);
+        cur = '';
+      } else cur += ch;
+    }
+    cells.push(cur);
+    const [name, lat, lng, place = '', status = ''] = cells.map((c) => c.trim());
+    const la = Number(lat);
+    const ln = Number(lng);
+    if (name && Number.isFinite(la) && Number.isFinite(ln) && Math.abs(la) <= 90 && Math.abs(ln) <= 180) out.push({ name, lat: la, lng: ln, place, estimated: status.includes('추정') });
+  }
+  return out;
 }
 
 // ---------- 거리 ----------

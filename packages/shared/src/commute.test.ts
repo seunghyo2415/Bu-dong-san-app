@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { CSV_TEMPLATE, haversineM, nearest, parseRouteCsv, parseRouteTable, splitPath, uniqueStops, walkMinutes } from './commute';
+import { CSV_TEMPLATE, haversineM, isWaypoint, nearest, parseRouteCsv, parseRouteTable, parseStopLocationCsv, splitPath, stopSearchQueries, uniqueStops, walkMinutes } from './commute';
 
 // ⚠️ 지어낸 예시 표 (실제 회사 노선표 아님) — 받은 형식의 구조만 흉내
 const TABLE: unknown[][] = [
@@ -58,5 +58,28 @@ describe('거리', () => {
       { name: 'c', location: null },
     ]);
     expect(n?.name).toBe('b');
+  });
+});
+
+describe('정류장 검색어·보정 파일', () => {
+  it('꼬리말 제거·오타 교정·괄호 안 이름', () => {
+    const q = stopSearchQueries('남운프라자 버스정류장(무거 위브자이)');
+    expect(q).toContain('남운프라자');
+    expect(q).toContain('무거 위브자이');
+    expect(stopSearchQueries('양산 롯데케슬')).toContain('양산 롯데캐슬');
+    expect(stopSearchQueries('우리은헹')).toContain('우리은행');
+    expect(stopSearchQueries('가나 아파트 맞은편')).toContain('가나 아파트');
+  });
+  it('경유 도로는 정류장 아님', () => {
+    expect(isWaypoint('(7번국도)')).toBe(true);
+    expect(isWaypoint('마바 정류장(사아 아파트)')).toBe(false);
+  });
+  it('보정 파일 읽기 (따옴표 속 쉼표)', () => {
+    const r = parseStopLocationCsv('\uFEFF정류장명,위도,경도,찾은 장소,상태\n"효성 1,2차 사이",35.6,129.4,어느 아파트,확인\n간판,35.5,129.3,,추정(앞뒤 정류장 중간)\n잘못된줄,abc,1');
+    expect(r).toEqual([
+      { name: '효성 1,2차 사이', lat: 35.6, lng: 129.4, place: '어느 아파트', estimated: false },
+      { name: '간판', lat: 35.5, lng: 129.3, place: '', estimated: true },
+    ]);
+    expect(parseStopLocationCsv('노선명,순번,정류장명\n')).toEqual([]);
   });
 });

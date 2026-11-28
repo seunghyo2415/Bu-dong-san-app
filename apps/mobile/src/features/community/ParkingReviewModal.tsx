@@ -5,6 +5,7 @@ import { Alert, Modal, Pressable, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { dataSource } from '@/data';
+import { KeyboardSheet } from '@/components/ui';
 import { radius, space, usePalette } from '@/theme/colors';
 
 import { NicknameGate } from './NicknameGate';
@@ -29,7 +30,7 @@ export function ParkingReviewModal({ complexId, visible, onClose }: { complexId:
   });
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' }} onPress={onClose} />
+      <KeyboardSheet onClose={onClose}>
       <View style={{ backgroundColor: c.card, padding: space.lg, paddingBottom: insets.bottom + space.lg, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, gap: space.md }}>
         <Text style={{ color: c.text, fontSize: 18, fontWeight: '800' }}>퇴근 시간 주차, 어떤가요?</Text>
         <NicknameGate>
@@ -54,6 +55,7 @@ export function ParkingReviewModal({ complexId, visible, onClose }: { complexId:
           </Pressable>
         </NicknameGate>
       </View>
+      </KeyboardSheet>
     </Modal>
   );
 }

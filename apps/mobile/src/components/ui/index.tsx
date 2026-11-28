@@ -97,3 +97,4 @@ const styles = StyleSheet.create({
 
 export { Card, Row, SectionTitle } from './Card';
 export { InfoTip } from './InfoTip';
+export { KeyboardSheet } from './KeyboardSheet';

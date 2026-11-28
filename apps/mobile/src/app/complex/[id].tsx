@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { EmptyState, MockBadge, Skeleton } from '@/components/ui';
+import { EmptyState, MockBadge, Skeleton, KeyboardSheet } from '@/components/ui';
 import { dataSource } from '@/data';
 import { InfoSection } from '@/features/complex/InfoSection';
 import { ListingsSection } from '@/features/complex/ListingsSection';
@@ -199,7 +199,7 @@ export default function ComplexScreen() {
       </View>
 
       <Modal visible={memoOpen} transparent animationType="slide" onRequestClose={() => setMemoOpen(false)}>
-        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' }} onPress={() => setMemoOpen(false)} />
+        <KeyboardSheet onClose={() => setMemoOpen(false)}>
         <View style={[styles.sheet, { backgroundColor: c.card, paddingBottom: insets.bottom + space.lg }]}>
           <Text style={{ color: c.text, fontSize: 18, fontWeight: '800' }}>{d.name} 메모</Text>
           <Text style={{ color: c.textSub, fontSize: 12, marginTop: 2 }}>이 폰에만 저장돼요.</Text>
@@ -221,6 +221,7 @@ export default function ComplexScreen() {
             </Pressable>
           </View>
         </View>
+        </KeyboardSheet>
       </Modal>
     </View>
   );
