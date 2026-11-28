@@ -14,6 +14,7 @@ import { Card, InfoTip, SourceNote } from '@/components/ui';
 import type { ComplexDetail } from '@/data';
 import { space, usePalette } from '@/theme/colors';
 
+import { ExternalAppButtons } from './ExternalAppButtons';
 import { gradeColor } from './grade';
 
 export function SummarySection({ d }: { d: ComplexDetail }) {
@@ -48,6 +49,8 @@ export function SummarySection({ d }: { d: ComplexDetail }) {
           ))}
         </View>
       </View>
+
+      <ExternalAppButtons d={d} />
 
       <View style={{ flexDirection: 'row', gap: space.md }}>
         <Card style={{ flex: 1 }}>

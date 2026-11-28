@@ -24,7 +24,7 @@ type Section = (typeof SECTIONS)[number];
 export default function ComplexScreen() {
   const c = usePalette();
   const insets = useSafeAreaInsets();
-  const { id, savedListing } = useLocalSearchParams<{ id: string; savedListing?: string }>();
+  const { id, savedListing, linked } = useLocalSearchParams<{ id: string; savedListing?: string; linked?: string }>();
   const q = useQuery({ queryKey: ['complex-detail', id], queryFn: () => dataSource.getComplexDetail(id) });
   const { favorites, toggleFavorite, addRecentView, memos, setMemo, compareIds, toggleCompare } = useAppStore();
   const scrollRef = useRef<ScrollViewInstance>(null);
@@ -114,6 +114,11 @@ export default function ComplexScreen() {
         }}>
         <View onLayout={mark('badge')} style={{ gap: space.sm }}>
           <MockBadge />
+          {linked ? (
+            <View style={[styles.memo, { backgroundColor: c.chip, marginTop: 0 }]}>
+              <Text style={{ color: c.good, fontWeight: '800' }}>✓ {linked === 'naver' ? '네이버페이 부동산' : '호갱노노'} 링크를 연결했어요. 아래 버튼을 누르면 바로 열려요</Text>
+            </View>
+          ) : null}
           {savedListing ? (
             <Pressable onPress={() => jump('매물')} style={[styles.memo, { backgroundColor: c.chip, marginTop: 0 }]}>
               <Text style={{ color: c.good, fontWeight: '800' }}>✓ 내 매물함에 저장했어요 · 실거래 비교 보기</Text>

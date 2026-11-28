@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
+  detectExternalLink,
   compareToRecentTrades,
   formatArea,
   formatManwon,
@@ -16,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card, Chip, MockBadge } from '@/components/ui';
 import { dataSource, type ComplexCandidate } from '@/data';
 import { MOCK_AS_OF } from '@/data/mock/complexes';
+import { ExternalLinkReceive } from '@/features/share/ExternalLinkReceive';
 import { fetchLinkPreview } from '@/features/share/link-preview';
 import { sourceOf, useListings } from '@/stores/listings';
 import { radius, space, usePalette } from '@/theme/colors';
@@ -24,10 +26,24 @@ type Step = 'reading' | 'finding' | 'choose' | 'save';
 const DEAL_LABEL = { sale: '매매', jeonse: '전세', monthly: '월세' } as const;
 
 export default function ShareReceiveScreen() {
-  const c = usePalette();
-  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ text?: string }>();
   const shared = (params.text ?? '').toString();
+  // 네이버페이 부동산·호갱노노 단지 링크면 '단지에 연결' 화면
+  const external = detectExternalLink(shared);
+  if (external) {
+    return (
+      <>
+        <Stack.Screen options={{ title: '단지 링크 연결' }} />
+        <ExternalLinkReceive app={external.app} url={external.url} text={shared} />
+      </>
+    );
+  }
+  return <ListingReceive shared={shared} />;
+}
+
+function ListingReceive({ shared }: { shared: string }) {
+  const c = usePalette();
+  const insets = useSafeAreaInsets();
   const addListing = useListings((s) => s.add);
 
   const [step, setStep] = useState<Step>('reading');

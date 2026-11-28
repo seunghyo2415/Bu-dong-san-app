@@ -29,6 +29,10 @@ type AppState = {
   addWorkplace: (w: Omit<Workplace, 'id'>) => void;
   removeWorkplace: (id: string) => void;
 
+  /** 단지별로 기억한 다른 앱 링크 (네이버페이 부동산·호갱노노) */
+  externalLinks: Record<string, { naver?: string; hogangnono?: string }>;
+  setExternalLink: (complexId: string, app: 'naver' | 'hogangnono', url: string | null) => void;
+
   compareIds: string[]; // 비교함 (최대 3)
   toggleCompare: (id: string) => 'added' | 'removed' | 'full';
   /** 관심 단지별 마지막으로 확인한 실거래 날짜 (홈의 '새 실거래' 표시용) */
@@ -75,6 +79,15 @@ export const useAppStore = create<AppState>()(
       addWorkplace: (w) => set((s) => ({ workplaces: [...s.workplaces, { ...w, id: Date.now().toString(36) }] })),
       removeWorkplace: (id) => set((s) => ({ workplaces: s.workplaces.filter((x) => x.id !== id) })),
 
+      externalLinks: {},
+      setExternalLink: (complexId, app, url) =>
+        set((s) => {
+          const cur = { ...(s.externalLinks[complexId] ?? {}) };
+          if (url) cur[app] = url;
+          else delete cur[app];
+          return { externalLinks: { ...s.externalLinks, [complexId]: cur } };
+        }),
+
       compareIds: [],
       toggleCompare: (id) => {
         const cur = get().compareIds;
@@ -111,8 +124,9 @@ export const useAppStore = create<AppState>()(
       name: 'app-store',
       storage: createJSONStorage(() => AsyncStorage),
       // 지도 이동 요청은 저장하지 않음
-      partialize: ({ filters, priceLabel, viewMode, recentSearches, favorites, recentViews, memos, workplaces, compareIds, lastSeenTrade }) => ({
+      partialize: ({ filters, priceLabel, viewMode, recentSearches, favorites, recentViews, memos, workplaces, compareIds, lastSeenTrade, externalLinks }) => ({
         workplaces,
+        externalLinks,
         compareIds,
         lastSeenTrade,
         filters,
