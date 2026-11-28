@@ -90,3 +90,14 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=<anon public 키>
 | `LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR` | 하루 호출 한도 초과 → 다음 날 이어서 실행 |
 | 자동 수집 로그 확인 | Table Editor → `ingest_runs` (error 칸) / Edge Functions → ingest → Logs |
 | 지도에 단지가 안 보임 | 좌표가 없는 단지 → `KAKAO_REST_KEY` 확인 후 `npm run ingest -- complexes` |
+
+---
+
+## 실제 설치 기록 (2026-11-28, Claude 가 진행)
+
+- 프로젝트: `bu-dong-san-app` (ref `yfgckuwwfpsmmudgoqxe`, 서울 ap-northeast-2)
+- 마이그레이션 1~6 적용, 서버 함수 ingest·geo·community·notify 배포, `INGEST_SECRET` 설정, 익명 로그인 켬
+- 자동 수집 예약 12개 (`cron.job`) 등록
+- 앱 빌드 설정(EAS)에 `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` 등록
+- 남은 것: 대시보드 Edge Functions → Secrets 에 `PUBLIC_DATA_KEY`, `KAKAO_REST_KEY` (사용자)
+- DB 비밀번호는 저장하지 않았어요. 필요하면 대시보드 Project Settings → Database 에서 재설정.

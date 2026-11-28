@@ -84,10 +84,12 @@ export async function syncComplexes(ctx: JobContext, sigungus = ULSAN_SIGUNGU) {
 }
 
 /** 건축물대장 총괄표제부·표제부 (단지 필지 기준) */
-export async function syncBuildings(ctx: JobContext) {
-  return tracked(ctx, 'buildings', null, async () => {
+export async function syncBuildings(ctx: JobContext, range: { offset?: number; limit?: number } = {}) {
+  return tracked(ctx, 'buildings', range, async () => {
     const parcels = await ctx.db.select<{ pnu: string }>('complex_parcels', 'select=pnu');
-    const pnus = [...new Set(parcels.map((p) => p.pnu))];
+    const all = [...new Set(parcels.map((p) => p.pnu))].sort();
+    // 실행 시간 제한 때문에 나눠서 (offset·limit 없으면 전체)
+    const pnus = all.slice(range.offset ?? 0, range.limit ? (range.offset ?? 0) + range.limit : undefined);
     let rowsOk = 0;
     await pool(pnus, 3, async (pnu) => {
       try {

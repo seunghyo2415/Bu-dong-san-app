@@ -28,9 +28,9 @@ Deno.serve(async (req) => {
   };
   try {
     if (job === 'complexes') await syncComplexes(ctx, sigungus);
-    else if (job === 'buildings') await syncBuildings(ctx);
+    else if (job === 'buildings') await syncBuildings(ctx, { offset: Number(body.offset) || 0, limit: Number(body.limit) || undefined });
     else await syncTrades(ctx, months, sigungus); // daily / trades: 기본 최근 2개월 (늦게 신고·해제되는 거래 반영)
-    await finish(ctx);
+    if (!body.skipFinish) await finish(ctx);
     return Response.json({ ok: true, logs });
   } catch (e) {
     return Response.json({ ok: false, error: String(e), logs }, { status: 500 });
