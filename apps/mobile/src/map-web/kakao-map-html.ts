@@ -16,9 +16,10 @@
  *   - error       { message }
  *
  * 카카오 JavaScript 키는 "공개용" 키라 앱에 들어가도 되지만,
- * 카카오 개발자 콘솔에서 허용 도메인(http://localhost)을 등록해야 동작합니다.
+ * 카카오 개발자 콘솔에서 허용 도메인(https://localhost)을 등록해야 동작합니다.
  */
-export const MAP_BASE_URL = 'http://localhost';
+// https 여야 카카오 SDK 가 지도 본체를 https 로 받음 (안드로이드는 http 연결을 기본 차단)
+export const MAP_BASE_URL = 'https://localhost';
 
 export function buildKakaoMapHtml(opts: {
   appKey: string;

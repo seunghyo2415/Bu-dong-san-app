@@ -1,6 +1,6 @@
 /**
  * 보이지 않는 WebView 에서 카카오맵 JS SDK 의 장소 검색(services.Places)을 실행한다.
- * 공개용 JavaScript 키만 쓰므로 서버 없이 동작. (허용 도메인 http://localhost 등록 필요)
+ * 공개용 JavaScript 키만 쓰므로 서버 없이 동작. (허용 도메인 https://localhost 등록 필요)
  *
  * 앱 → 웹: window.__req({ id, kind: 'keyword'|'category', query?, code?, lat?, lng?, radius?, size?, sort? })
  * 웹 → 앱: { type: 'ready' } | { type: 'res', id, ok, places?, total?, error? } | { type: 'error', message }

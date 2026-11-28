@@ -6,7 +6,7 @@
 ## A. 지금 바로 (10분) — 지도 켜기
 
 - [ ] 카카오 개발자 앱 만들고 **JavaScript 키** → `apps/mobile/.env` 의 `EXPO_PUBLIC_KAKAO_JS_KEY` ([API_KEYS.md](API_KEYS.md) 1번)
-- [ ] 같은 화면에서 **Web 플랫폼 도메인 `http://localhost`** 등록
+- [ ] 같은 화면에서 **Web 플랫폼 도메인 `https://localhost`** 등록
 - [ ] `npm start` → Expo Go 로 확인: 지도·로드뷰·주변시설·직장 등록·통근버스 불러오기가 이 키 하나로 동작
 
 ## B. 실제 데이터 (30분 + 수집 1시간) — [SETUP_SUPABASE.md](SETUP_SUPABASE.md)

@@ -28,7 +28,7 @@ npx eas-cli@latest build --profile development --platform android
 
 끝나면 나오는 링크(QR)를 폰으로 열어 APK 설치 → 컴퓨터에서 `npm start` → 개발용 앱에서 접속.
 
-> ⚠️ 카카오 개발자 콘솔 → 플랫폼 → **Android** 플랫폼도 등록해 두세요 (패키지명 `com.myrealestate.ulsan`). 지도는 WebView 라 Web(http://localhost) 등록이 핵심이에요.
+> ⚠️ 카카오 개발자 콘솔 → 플랫폼 → **Android** 플랫폼도 등록해 두세요 (패키지명 `com.myrealestate.ulsan`). 지도는 WebView 라 Web(https://localhost) 등록이 핵심이에요.
 
 ## 2. 스토어 배포 전에 꼭 할 일
 
