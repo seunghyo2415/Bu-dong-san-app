@@ -9,6 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ErrorView } from '@/components/ErrorView';
 import { KakaoServicesProvider } from '@/features/places/KakaoServices';
+import { UpdateBanner } from '@/features/updates/UpdateBanner';
 import * as Notifications from 'expo-notifications';
 import '@/features/alerts/push';
 
@@ -68,6 +69,7 @@ export default function RootLayout() {
             <Stack.Screen name="calculators" options={{ title: '계산기' }} />
             <Stack.Screen name="about" options={{ title: '안내' }} />
           </Stack>
+          {Platform.OS === 'web' ? null : <UpdateBanner />}
         </ThemeProvider>
         </KakaoServicesProvider>
       </QueryClientProvider>
